@@ -5,15 +5,17 @@ import { getChatId, useMessages } from "@/hooks/useMessages";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface ChatWindowProps {
   currentUser: User;
   selectedUser: ChatUser;
+  onBack: () => void;
 }
 
-export function ChatWindow({ currentUser, selectedUser }: ChatWindowProps) {
+export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProps) {
   const chatId = getChatId(currentUser.uid, selectedUser.uid);
   const { messages, sendMessage } = useMessages(chatId, currentUser.uid);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -38,7 +40,16 @@ export function ChatWindow({ currentUser, selectedUser }: ChatWindowProps) {
   return (
     <div className="flex flex-col h-full w-full relative bg-background">
       {/* Header */}
-      <div className="h-16 border-b border-border bg-card/50 backdrop-blur-md flex items-center px-6 shrink-0 z-10 sticky top-0">
+      <div className="h-16 border-b border-border bg-card/50 backdrop-blur-md flex items-center px-4 shrink-0 z-10 sticky top-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onBack}
+          className="md:hidden mr-2 h-8 w-8 text-muted-foreground"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
         <div className="flex items-center gap-3">
           <div className="relative">
             <Avatar className="h-10 w-10">
