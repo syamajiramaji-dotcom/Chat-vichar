@@ -30,7 +30,7 @@ export function MessageBubble({ message, isCurrentUser, onReply }: MessageBubble
           <Avatar className="w-8 h-8 shrink-0 mt-auto mb-1">
             <AvatarImage src={message.senderPhotoURL || undefined} />
             <AvatarFallback className="bg-primary/10 text-primary text-xs">
-              {message.senderName.charAt(0).toUpperCase()}
+              {(message.senderName || "U").charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
         )}

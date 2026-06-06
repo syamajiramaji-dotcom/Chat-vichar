@@ -26,7 +26,9 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser }: SidebarProp
     if (!searchQuery.trim()) return users;
     const lowerQ = searchQuery.toLowerCase();
     return users.filter(
-      u => u.displayName.toLowerCase().includes(lowerQ) || u.email.toLowerCase().includes(lowerQ)
+      u =>
+        (u.displayName || "").toLowerCase().includes(lowerQ) ||
+        (u.email || "").toLowerCase().includes(lowerQ)
     );
   }, [users, searchQuery]);
 
@@ -95,7 +97,7 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser }: SidebarProp
                       <AvatarFallback className={cn(
                         isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                       )}>
-                        {u.displayName.charAt(0).toUpperCase()}
+                        {(u.displayName || u.email || "U").charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     {u.online && (

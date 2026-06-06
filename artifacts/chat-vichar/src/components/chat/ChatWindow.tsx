@@ -44,7 +44,7 @@ export function ChatWindow({ currentUser, selectedUser }: ChatWindowProps) {
             <Avatar className="h-10 w-10">
               <AvatarImage src={selectedUser.photoURL || undefined} />
               <AvatarFallback className="bg-primary/10 text-primary">
-                {selectedUser.displayName.charAt(0).toUpperCase()}
+                {(selectedUser.displayName || selectedUser.email || "U").charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             {selectedUser.online && (
@@ -77,7 +77,7 @@ export function ChatWindow({ currentUser, selectedUser }: ChatWindowProps) {
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-2">
                 <Avatar className="h-12 w-12 opacity-50 grayscale">
                   <AvatarImage src={selectedUser.photoURL || undefined} />
-                  <AvatarFallback>{selectedUser.displayName.charAt(0)}</AvatarFallback>
+                  <AvatarFallback>{(selectedUser.displayName || selectedUser.email || "U").charAt(0)}</AvatarFallback>
                 </Avatar>
               </div>
               <p>This is the beginning of your chat with {selectedUser.displayName}.</p>
