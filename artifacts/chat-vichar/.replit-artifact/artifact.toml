@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Chat-vichar"
+version = "1.0.0"
+id = "artifacts/chat-vichar"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23747
+
+[services.development]
+run = "pnpm --filter @workspace/chat-vichar run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/chat-vichar", "run", "build" ]
+publicDir = "artifacts/chat-vichar/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23747"
+BASE_PATH = "/"
