@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { User } from "firebase/auth";
 import { ChatUser, Message } from "@/types/chat";
 import { getChatId, useMessages } from "@/hooks/useMessages";
-import { MessageBubble } from "./MessageBubble";
+import { useChatSeen } from "@/hooks/useChatSeen";
+import { MessageBubble, MessageStatus } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,24 @@ interface ChatWindowProps {
   onBack: () => void;
 }
 
+function getMessageStatus(
+  message: Message,
+  currentUid: string,
+  recipientOnline: boolean,
+  recipientSeenAt: number
+): MessageStatus {
+  // Only compute status for messages sent by the current user
+  if (message.senderId !== currentUid) return "sent";
+  if (recipientSeenAt > 0 && message.timestamp <= recipientSeenAt) return "seen";
+  if (recipientOnline) return "delivered";
+  return "sent";
+}
+
 export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProps) {
   const chatId = getChatId(currentUser.uid, selectedUser.uid);
   const { messages, sendMessage } = useMessages(chatId, currentUser.uid, selectedUser.uid);
+  const recipientSeenAt = useChatSeen(chatId, currentUser.uid, selectedUser.uid);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-  
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when messages change
@@ -64,21 +78,21 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
           </div>
           <div className="flex flex-col">
             <span className="font-semibold text-foreground">
-              {selectedUser.displayName}
+              {selectedUser.displayName || selectedUser.email || "Unknown"}
             </span>
             <span className="text-xs text-muted-foreground">
-              {selectedUser.online 
-                ? "Online" 
-                : selectedUser.lastSeen 
-                  ? `Last seen ${formatDistanceToNow(selectedUser.lastSeen, { addSuffix: true })}` 
-                  : "Offline"}
+              {selectedUser.online
+                ? "Online"
+                : selectedUser.lastSeen
+                ? `Last seen ${formatDistanceToNow(selectedUser.lastSeen, { addSuffix: true })}`
+                : "Offline"}
             </span>
           </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div 
+      <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 md:p-6 scroll-smooth"
       >
@@ -88,22 +102,30 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-2">
                 <Avatar className="h-12 w-12 opacity-50 grayscale">
                   <AvatarImage src={selectedUser.photoURL || undefined} />
-                  <AvatarFallback>{(selectedUser.displayName || selectedUser.email || "U").charAt(0)}</AvatarFallback>
+                  <AvatarFallback>
+                    {(selectedUser.displayName || selectedUser.email || "U").charAt(0)}
+                  </AvatarFallback>
                 </Avatar>
               </div>
-              <p>This is the beginning of your chat with {selectedUser.displayName}.</p>
+              <p>This is the beginning of your chat with {selectedUser.displayName || "this user"}.</p>
               <p className="text-sm">Say hello!</p>
             </div>
           ) : (
             <div className="flex flex-col">
-              {messages.map((msg, index) => {
+              {messages.map((msg) => {
                 const isCurrentUser = msg.senderId === currentUser.uid;
-                
+                const status = getMessageStatus(
+                  msg,
+                  currentUser.uid,
+                  selectedUser.online,
+                  recipientSeenAt
+                );
                 return (
-                  <MessageBubble 
+                  <MessageBubble
                     key={msg.id}
                     message={msg}
                     isCurrentUser={isCurrentUser}
+                    status={status}
                     onReply={setReplyTo}
                   />
                 );
@@ -115,7 +137,7 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
 
       {/* Input Area */}
       <div className="shrink-0 w-full max-w-4xl mx-auto">
-        <MessageInput 
+        <MessageInput
           onSendMessage={handleSendMessage}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
