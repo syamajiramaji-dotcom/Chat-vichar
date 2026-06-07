@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { ref, push, onValue, query, limitToLast, update, serverTimestamp } from "firebase/database";
+import { ref, push, onValue, query, limitToLast } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Message, ReplyTo, MessageMedia } from "@/types/chat";
 import { incrementUnread } from "@/lib/unread";
@@ -50,6 +50,7 @@ export function useMessages(
     }) => {
       if (!chatId) return;
 
+      // Write directly to the messages sub-path — never touch the parent node
       const msgsRef = ref(db, `chats/${chatId}/messages`);
       const newMsg: Omit<Message, "id"> = {
         senderId: currentUid,
@@ -62,13 +63,7 @@ export function useMessages(
       };
       await push(msgsRef, newMsg);
 
-      // Update chat metadata — use update() so the messages/seen sub-nodes are NOT overwritten
-      await update(ref(db, `chats/${chatId}`), {
-        lastMessage: text || `[${media?.mediaType}]`,
-        lastMessageAt: serverTimestamp(),
-      });
-
-      // Bump the recipient's unread counter for this sender
+      // Bump the recipient's unread counter — writes to unread/ path, unrelated to chats/
       if (recipientUid) {
         await incrementUnread(recipientUid, currentUid);
       }
