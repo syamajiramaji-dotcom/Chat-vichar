@@ -19,18 +19,6 @@ expertMode = true
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
 
-[[ports]]
-localPort = 8080
-externalPort = 80
-
-[[ports]]
-localPort = 8081
-externalPort = 8081
-
-[[ports]]
-localPort = 23747
-externalPort = 3000
-
 [userenv]
 
 [userenv.shared]
@@ -43,3 +31,15 @@ VITE_FIREBASE_MESSAGING_SENDER_ID = "725116740007"
 VITE_FIREBASE_APP_ID = "1:725116740007:web:c90c35837a1cb394269682"
 VITE_CLOUDINARY_CLOUD_NAME = "dfe8dyrcw"
 VITE_CLOUDINARY_UPLOAD_PRESET = "chat_upload"
+
+[[ports]]
+localPort = 8080
+externalPort = 80
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 23747
+externalPort = 3000
