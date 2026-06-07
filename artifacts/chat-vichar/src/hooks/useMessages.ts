@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { ref, push, onValue, query, limitToLast, set, serverTimestamp } from "firebase/database";
+import { ref, push, onValue, query, limitToLast, update, serverTimestamp } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Message, ReplyTo, MessageMedia } from "@/types/chat";
 import { incrementUnread } from "@/lib/unread";
@@ -62,8 +62,8 @@ export function useMessages(
       };
       await push(msgsRef, newMsg);
 
-      // Update chat metadata
-      await set(ref(db, `chats/${chatId}`), {
+      // Update chat metadata — use update() so the messages/seen sub-nodes are NOT overwritten
+      await update(ref(db, `chats/${chatId}`), {
         lastMessage: text || `[${media?.mediaType}]`,
         lastMessageAt: serverTimestamp(),
       });
