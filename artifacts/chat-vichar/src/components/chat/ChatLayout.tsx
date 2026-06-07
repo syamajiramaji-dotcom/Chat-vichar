@@ -4,15 +4,20 @@ import { Sidebar } from "./Sidebar";
 import { ChatWindow } from "./ChatWindow";
 import { ChatUser } from "@/types/chat";
 import { MessageSquare } from "lucide-react";
+import { useUnreadCounts } from "@/hooks/useUnreadCounts";
+import { markAsRead } from "@/lib/unread";
 
 export function ChatLayout() {
   const { user } = useAuth();
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
+  const unreadCounts = useUnreadCounts(user?.uid ?? "");
 
   if (!user) return null;
 
   const handleSelectUser = (u: ChatUser) => {
     setSelectedUser(u);
+    // Clear unread counter as soon as the conversation is opened
+    markAsRead(user.uid, u.uid);
   };
 
   const handleBack = () => {
@@ -21,7 +26,7 @@ export function ChatLayout() {
 
   return (
     <div className="flex h-[100dvh] w-full bg-background overflow-hidden">
-      {/* Sidebar: always visible on md+; on mobile only visible when no chat is open */}
+      {/* Sidebar: always visible on md+; hidden on mobile when a chat is open */}
       <div
         className={[
           "flex-shrink-0 h-full",
@@ -34,10 +39,11 @@ export function ChatLayout() {
           currentUser={user}
           selectedUser={selectedUser}
           onSelectUser={handleSelectUser}
+          unreadCounts={unreadCounts}
         />
       </div>
 
-      {/* Chat panel: always visible on md+; on mobile only visible when a chat is open */}
+      {/* Chat panel: always visible on md+; shown on mobile when a chat is open */}
       <main
         className={[
           "flex-1 flex flex-col h-full bg-card/30 relative min-w-0",

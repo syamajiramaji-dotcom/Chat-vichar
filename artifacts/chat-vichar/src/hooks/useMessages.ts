@@ -2,12 +2,17 @@ import { useEffect, useState, useCallback } from "react";
 import { ref, push, onValue, query, limitToLast, set, serverTimestamp } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Message, ReplyTo, MessageMedia } from "@/types/chat";
+import { incrementUnread } from "@/lib/unread";
 
 export function getChatId(uid1: string, uid2: string) {
   return [uid1, uid2].sort().join("_");
 }
 
-export function useMessages(chatId: string | null, currentUid: string) {
+export function useMessages(
+  chatId: string | null,
+  currentUid: string,
+  recipientUid: string
+) {
   const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
@@ -44,6 +49,7 @@ export function useMessages(chatId: string | null, currentUid: string) {
       senderPhotoURL: string | null;
     }) => {
       if (!chatId) return;
+
       const msgsRef = ref(db, `chats/${chatId}/messages`);
       const newMsg: Omit<Message, "id"> = {
         senderId: currentUid,
@@ -55,13 +61,19 @@ export function useMessages(chatId: string | null, currentUid: string) {
         ...(replyTo ? { replyTo } : {}),
       };
       await push(msgsRef, newMsg);
-      const metaRef = ref(db, `chats/${chatId}`);
-      await set(metaRef, {
+
+      // Update chat metadata
+      await set(ref(db, `chats/${chatId}`), {
         lastMessage: text || `[${media?.mediaType}]`,
         lastMessageAt: serverTimestamp(),
       });
+
+      // Bump the recipient's unread counter for this sender
+      if (recipientUid) {
+        await incrementUnread(recipientUid, currentUid);
+      }
     },
-    [chatId, currentUid]
+    [chatId, currentUid, recipientUid]
   );
 
   return { messages, sendMessage };

@@ -17,7 +17,7 @@ interface ChatWindowProps {
 
 export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProps) {
   const chatId = getChatId(currentUser.uid, selectedUser.uid);
-  const { messages, sendMessage } = useMessages(chatId, currentUser.uid);
+  const { messages, sendMessage } = useMessages(chatId, currentUser.uid, selectedUser.uid);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);

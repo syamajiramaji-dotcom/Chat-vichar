@@ -15,36 +15,61 @@ interface SidebarProps {
   currentUser: User;
   selectedUser: ChatUser | null;
   onSelectUser: (user: ChatUser) => void;
+  unreadCounts: Record<string, number>;
 }
 
-export function Sidebar({ currentUser, selectedUser, onSelectUser }: SidebarProps) {
+export function Sidebar({ currentUser, selectedUser, onSelectUser, unreadCounts }: SidebarProps) {
   const { users, loading } = useUsers(currentUser.uid);
   const { logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Sort: users with unread messages first, then online, then by name
+  const sortedUsers = useMemo(() => {
+    return [...users].sort((a, b) => {
+      const aUnread = unreadCounts[a.uid] ?? 0;
+      const bUnread = unreadCounts[b.uid] ?? 0;
+      if (bUnread !== aUnread) return bUnread - aUnread; // unread first
+      if (b.online !== a.online) return b.online ? 1 : -1; // online first
+      return (a.displayName || "").localeCompare(b.displayName || "");
+    });
+  }, [users, unreadCounts]);
+
   const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) return users;
+    if (!searchQuery.trim()) return sortedUsers;
     const lowerQ = searchQuery.toLowerCase();
-    return users.filter(
+    return sortedUsers.filter(
       (u) =>
         (u.displayName || "").toLowerCase().includes(lowerQ) ||
         (u.email || "").toLowerCase().includes(lowerQ)
     );
-  }, [users, searchQuery]);
+  }, [sortedUsers, searchQuery]);
+
+  const totalUnread = useMemo(
+    () => Object.values(unreadCounts).reduce((sum, n) => sum + n, 0),
+    [unreadCounts]
+  );
 
   return (
     <div className="w-full md:w-80 lg:w-96 border-r border-border bg-sidebar flex flex-col h-full flex-shrink-0">
       {/* Header */}
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between sticky top-0 z-10 bg-sidebar">
         <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10 border border-sidebar-border shadow-sm">
-            <AvatarImage src={currentUser.photoURL || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-              {currentUser.displayName?.charAt(0).toUpperCase() ||
-                currentUser.email?.charAt(0).toUpperCase() ||
-                "U"}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-10 w-10 border border-sidebar-border shadow-sm">
+              <AvatarImage src={currentUser.photoURL || undefined} />
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                {currentUser.displayName?.charAt(0).toUpperCase() ||
+                  currentUser.email?.charAt(0).toUpperCase() ||
+                  "U"}
+              </AvatarFallback>
+            </Avatar>
+            {/* Total unread badge on current user avatar */}
+            {totalUnread > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow">
+                {totalUnread > 99 ? "99+" : totalUnread}
+              </span>
+            )}
+          </div>
           <div className="flex flex-col">
             <span className="font-semibold text-sm text-sidebar-foreground truncate max-w-[140px]">
               {currentUser.displayName || currentUser.email?.split("@")[0] || "Me"}
@@ -85,7 +110,6 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser }: SidebarProp
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-0.5">
           {loading ? (
-            /* Skeleton loading state */
             Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 p-3 rounded-xl">
                 <div className="h-12 w-12 rounded-full bg-muted animate-pulse shrink-0" />
@@ -108,6 +132,7 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser }: SidebarProp
             filteredUsers.map((u) => {
               const isSelected = selectedUser?.uid === u.uid;
               const initial = (u.displayName || u.email || "U").charAt(0).toUpperCase();
+              const unread = unreadCounts[u.uid] ?? 0;
 
               return (
                 <button
@@ -118,6 +143,8 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser }: SidebarProp
                     "w-full flex items-center gap-3 p-3 rounded-xl transition-colors duration-150 text-left",
                     isSelected
                       ? "bg-primary/10 ring-1 ring-primary/20"
+                      : unread > 0
+                      ? "bg-primary/5 hover:bg-primary/10"
                       : "hover:bg-sidebar-accent/60"
                   )}
                 >
@@ -143,23 +170,36 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser }: SidebarProp
 
                   {/* Name + status */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center justify-between gap-2">
                       <span
                         className={cn(
-                          "font-medium text-sm truncate",
-                          isSelected ? "text-primary" : "text-sidebar-foreground"
+                          "text-sm truncate",
+                          unread > 0 ? "font-bold text-foreground" : "font-medium text-sidebar-foreground",
+                          isSelected && "text-primary"
                         )}
                       >
                         {u.displayName || u.email || "Unknown"}
                       </span>
-                      {!u.online && u.lastSeen > 0 && (
-                        <span className="text-[10px] text-muted-foreground shrink-0">
-                          {formatDistanceToNow(u.lastSeen, { addSuffix: true })}
+
+                      {/* Unread badge */}
+                      {unread > 0 && !isSelected && (
+                        <span
+                          data-testid={`badge-unread-${u.uid}`}
+                          className="min-w-[20px] h-5 bg-primary text-primary-foreground text-[11px] font-bold rounded-full flex items-center justify-center px-1.5 shrink-0 shadow-sm"
+                        >
+                          {unread > 99 ? "99+" : unread}
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {u.online ? "Online" : "Offline"}
+                    <span
+                      className={cn(
+                        "text-xs truncate block",
+                        unread > 0 ? "text-primary/70 font-medium" : "text-muted-foreground"
+                      )}
+                    >
+                      {u.online ? "Online" : !u.online && u.lastSeen > 0
+                        ? `Last seen ${formatDistanceToNow(u.lastSeen, { addSuffix: true })}`
+                        : "Offline"}
                     </span>
                   </div>
                 </button>
