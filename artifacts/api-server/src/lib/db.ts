@@ -25,10 +25,19 @@ export interface StoredMessage {
 
 const MAX_MESSAGES = 200;
 
-/** Safely coerce whatever list() returns into a string array */
+/**
+ * @replit/database v3.x list() returns { ok: boolean, value: string[] }
+ * rather than a plain string[]. Handle all known shapes defensively.
+ */
 function toStringArray(val: unknown): string[] {
   if (Array.isArray(val)) return val as string[];
-  if (val && typeof val === "object") return Object.keys(val as object);
+  if (val && typeof val === "object") {
+    const obj = val as Record<string, unknown>;
+    // v3 shape: { ok: true, value: ["key1", ...] }
+    if (Array.isArray(obj.value)) return obj.value as string[];
+    // fallback: treat object keys as the list (legacy behaviour)
+    return Object.keys(obj);
+  }
   return [];
 }
 
