@@ -19,6 +19,7 @@ export interface StoredMessage {
   text?: string;
   media?: object;
   replyTo?: object;
+  reactions?: Record<string, string[]>;
   timestamp: number;
 }
 
@@ -46,6 +47,33 @@ export async function getMessages(chatId: string): Promise<StoredMessage[]> {
   const key = `chat:${chatId}:messages`;
   const messages = (await client.get(key)) as StoredMessage[] | null;
   return Array.isArray(messages) ? messages : [];
+}
+
+export async function toggleReaction(
+  chatId: string,
+  messageId: string,
+  emoji: string,
+  uid: string
+): Promise<Record<string, string[]>> {
+  const key = `chat:${chatId}:messages`;
+  const messages = await getMessages(chatId);
+  const msg = messages.find((m) => m.id === messageId);
+  if (!msg) return {};
+
+  const reactions: Record<string, string[]> = { ...(msg.reactions ?? {}) };
+  const uids = [...(reactions[emoji] ?? [])];
+  const idx = uids.indexOf(uid);
+  if (idx >= 0) {
+    uids.splice(idx, 1);
+    if (uids.length === 0) delete reactions[emoji];
+    else reactions[emoji] = uids;
+  } else {
+    reactions[emoji] = [...uids, uid];
+  }
+
+  msg.reactions = reactions;
+  await client.set(key, messages);
+  return reactions;
 }
 
 export async function setUser(uid: string, info: StoredUser): Promise<void> {

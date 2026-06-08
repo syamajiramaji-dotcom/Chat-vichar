@@ -115,6 +115,30 @@ export function setupSocket(httpServer: HttpServer) {
       }
     );
 
+    // ── react_message ────────────────────────────────────────────────────────
+    socket.on(
+      "react_message",
+      async ({
+        chatId,
+        messageId,
+        emoji,
+        recipientUid,
+      }: {
+        chatId: string;
+        messageId: string;
+        emoji: string;
+        recipientUid: string;
+      }) => {
+        const uid = socket.data.uid as string | undefined;
+        if (!uid) return;
+        const reactions = await db.toggleReaction(chatId, messageId, emoji, uid);
+        const payload = { chatId, messageId, reactions };
+        // Send to both participants
+        io.to(`user:${uid}`).emit("reaction_update", payload);
+        io.to(`user:${recipientUid}`).emit("reaction_update", payload);
+      }
+    );
+
     // ── typing ───────────────────────────────────────────────────────────────
     socket.on(
       "typing_start",

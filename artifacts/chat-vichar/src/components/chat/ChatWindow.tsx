@@ -150,6 +150,13 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
   const handleTypingStart = () => socket.emit("typing_start", { chatId, recipientUid: selectedUser.uid });
   const handleTypingStop = () => socket.emit("typing_stop", { chatId, recipientUid: selectedUser.uid });
 
+  const handleReact = useCallback(
+    (messageId: string, emoji: string) => {
+      socket.emit("react_message", { chatId, messageId, emoji, recipientUid: selectedUser.uid });
+    },
+    [chatId, selectedUser.uid]
+  );
+
   const headerSubline = isRecipientTyping ? (
     <span className="text-xs text-primary font-medium flex items-center gap-1">
       typing
@@ -329,6 +336,8 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
                     isCurrentUser={isCurrentUser}
                     status={status}
                     onReply={setReplyTo}
+                    onReact={handleReact}
+                    currentUserUid={currentUser.uid}
                     searchQuery={isAnyMatch ? searchQuery : ""}
                     isCurrentMatch={isCurrentMatch}
                   />

@@ -19,7 +19,6 @@ export function useMessages(
       return;
     }
 
-    // Fetch message history via acknowledgement callback
     socket.emit(
       "get_messages",
       { chatId },
@@ -31,7 +30,6 @@ export function useMessages(
       }
     );
 
-    // Listen for incoming messages in this chat
     const handleNewMessage = ({
       chatId: incomingChatId,
       message,
@@ -46,9 +44,27 @@ export function useMessages(
       });
     };
 
+    const handleReactionUpdate = ({
+      chatId: updatedChatId,
+      messageId,
+      reactions,
+    }: {
+      chatId: string;
+      messageId: string;
+      reactions: Record<string, string[]>;
+    }) => {
+      if (updatedChatId !== chatId) return;
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, reactions } : m))
+      );
+    };
+
     socket.on("new_message", handleNewMessage);
+    socket.on("reaction_update", handleReactionUpdate);
+
     return () => {
       socket.off("new_message", handleNewMessage);
+      socket.off("reaction_update", handleReactionUpdate);
     };
   }, [chatId]);
 
@@ -79,10 +95,7 @@ export function useMessages(
         ...(replyTo ? { replyTo } : {}),
       };
 
-      // Optimistic local update — appears instantly for the sender
       setMessages((prev) => [...prev, message]);
-
-      // Tell the server — it persists and delivers to recipient
       socket.emit("send_message", { chatId, recipientUid, message });
     },
     [chatId, currentUid, recipientUid]

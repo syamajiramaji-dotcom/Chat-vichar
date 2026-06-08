@@ -32,7 +32,7 @@ export interface Message {
   media?: MessageMedia;
   replyTo?: ReplyTo;
   timestamp: number;
-  reactions?: Record<string, string>;
+  reactions?: Record<string, string[]>; // emoji → [uid, uid, ...]
 }
 
 export interface Conversation {
