@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { ref, push, onValue, query, limitToLast } from "firebase/database";
-import { db } from "@/lib/firebase";
+import { socket } from "@/lib/socket";
 import { Message, ReplyTo, MessageMedia } from "@/types/chat";
-import { incrementUnread } from "@/lib/unread";
 
 export function getChatId(uid1: string, uid2: string) {
   return [uid1, uid2].sort().join("_");
@@ -16,22 +14,42 @@ export function useMessages(
   const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
-    if (!chatId) return;
-    const msgsRef = query(ref(db, `chats/${chatId}/messages`), limitToLast(100));
-    const unsub = onValue(msgsRef, (snap) => {
-      if (!snap.exists()) {
-        setMessages([]);
-        return;
+    if (!chatId) {
+      setMessages([]);
+      return;
+    }
+
+    // Fetch message history via acknowledgement callback
+    socket.emit(
+      "get_messages",
+      { chatId },
+      (response: { messages: Message[] }) => {
+        const sorted = (response?.messages ?? []).sort(
+          (a, b) => a.timestamp - b.timestamp
+        );
+        setMessages(sorted);
       }
-      const data = snap.val() as Record<string, Omit<Message, "id">>;
-      const list: Message[] = Object.entries(data).map(([id, msg]) => ({
-        id,
-        ...msg,
-      }));
-      list.sort((a, b) => a.timestamp - b.timestamp);
-      setMessages(list);
-    });
-    return unsub;
+    );
+
+    // Listen for incoming messages in this chat
+    const handleNewMessage = ({
+      chatId: incomingChatId,
+      message,
+    }: {
+      chatId: string;
+      message: Message;
+    }) => {
+      if (incomingChatId !== chatId) return;
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === message.id)) return prev;
+        return [...prev, message].sort((a, b) => a.timestamp - b.timestamp);
+      });
+    };
+
+    socket.on("new_message", handleNewMessage);
+    return () => {
+      socket.off("new_message", handleNewMessage);
+    };
   }, [chatId]);
 
   const sendMessage = useCallback(
@@ -50,9 +68,8 @@ export function useMessages(
     }) => {
       if (!chatId) return;
 
-      // Write directly to the messages sub-path — never touch the parent node
-      const msgsRef = ref(db, `chats/${chatId}/messages`);
-      const newMsg: Omit<Message, "id"> = {
+      const message: Message = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         senderId: currentUid,
         senderName,
         senderPhotoURL,
@@ -61,12 +78,12 @@ export function useMessages(
         ...(media ? { media } : {}),
         ...(replyTo ? { replyTo } : {}),
       };
-      await push(msgsRef, newMsg);
 
-      // Bump the recipient's unread counter — writes to unread/ path, unrelated to chats/
-      if (recipientUid) {
-        await incrementUnread(recipientUid, currentUid);
-      }
+      // Optimistic local update — appears instantly for the sender
+      setMessages((prev) => [...prev, message]);
+
+      // Tell the server — it persists and delivers to recipient
+      socket.emit("send_message", { chatId, recipientUid, message });
     },
     [chatId, currentUid, recipientUid]
   );

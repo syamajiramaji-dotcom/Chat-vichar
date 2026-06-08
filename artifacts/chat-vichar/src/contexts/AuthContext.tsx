@@ -8,8 +8,8 @@ import {
   updateProfile,
   onAuthStateChanged,
 } from "firebase/auth";
-import { ref, set, onDisconnect, serverTimestamp } from "firebase/database";
-import { auth, db, googleProvider } from "@/lib/firebase";
+import { auth, googleProvider } from "@/lib/firebase";
+import { connectSocket, disconnectSocket } from "@/lib/socket";
 
 interface AuthContextType {
   user: User | null;
@@ -27,23 +27,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
+    const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
+
       if (u) {
-        const userRef = ref(db, `users/${u.uid}`);
-        await set(userRef, {
+        // Connect / re-authenticate the socket with Firebase identity
+        connectSocket({
           uid: u.uid,
           displayName: u.displayName || u.email?.split("@")[0] || "User",
-          email: u.email,
+          email: u.email || "",
           photoURL: u.photoURL,
-          online: true,
-          lastSeen: Date.now(),
         });
-        const presenceRef = ref(db, `users/${u.uid}/online`);
-        onDisconnect(presenceRef).set(false);
-        const lastSeenRef = ref(db, `users/${u.uid}/lastSeen`);
-        onDisconnect(lastSeenRef).set(serverTimestamp());
+      } else {
+        disconnectSocket();
       }
     });
     return unsub;
@@ -60,20 +57,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUpWithEmail = async (email: string, password: string, name: string) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
+    // Re-authenticate socket with updated display name
+    connectSocket({
+      uid: cred.user.uid,
+      displayName: name,
+      email: cred.user.email || "",
+      photoURL: cred.user.photoURL,
+    });
   };
 
   const logout = async () => {
-    if (user) {
-      const userRef = ref(db, `users/${user.uid}`);
-      await set(userRef, {
-        uid: user.uid,
-        displayName: user.displayName || "User",
-        email: user.email,
-        photoURL: user.photoURL,
-        online: false,
-        lastSeen: Date.now(),
-      });
-    }
+    disconnectSocket();
     await signOut(auth);
   };
 

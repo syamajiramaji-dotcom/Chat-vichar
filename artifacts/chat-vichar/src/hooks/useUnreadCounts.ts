@@ -1,31 +1,46 @@
 import { useEffect, useState } from "react";
-import { ref, onValue } from "firebase/database";
-import { db } from "@/lib/firebase";
+import { socket } from "@/lib/socket";
 
 /**
  * Returns a live map of { [senderUid]: unreadCount } for the current user.
- * Listens to `unread/{currentUid}` in Firebase Realtime Database.
+ * Populated via Socket.io instead of Firebase.
  */
 export function useUnreadCounts(currentUid: string): Record<string, number> {
   const [counts, setCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!currentUid) return;
-    const unreadRef = ref(db, `unread/${currentUid}`);
-    const unsub = onValue(unreadRef, (snap) => {
-      if (!snap.exists()) {
-        setCounts({});
-        return;
-      }
-      const raw = snap.val() as Record<string, number>;
-      // Only keep senders that have at least 1 unread message
-      const filtered: Record<string, number> = {};
-      for (const [uid, count] of Object.entries(raw)) {
-        if (count > 0) filtered[uid] = count;
-      }
-      setCounts(filtered);
-    });
-    return unsub;
+
+    // Full snapshot on connect / re-auth
+    const handleCounts = ({ counts: c }: { counts: Record<string, number> }) => {
+      setCounts(c ?? {});
+    };
+
+    // Individual bump when a new message arrives
+    const handleUpdate = ({
+      senderUid,
+      count,
+    }: {
+      senderUid: string;
+      count: number;
+    }) => {
+      setCounts((prev) => {
+        const next = { ...prev };
+        if (count > 0) {
+          next[senderUid] = count;
+        } else {
+          delete next[senderUid];
+        }
+        return next;
+      });
+    };
+
+    socket.on("unread_counts", handleCounts);
+    socket.on("unread_update", handleUpdate);
+    return () => {
+      socket.off("unread_counts", handleCounts);
+      socket.off("unread_update", handleUpdate);
+    };
   }, [currentUid]);
 
   return counts;

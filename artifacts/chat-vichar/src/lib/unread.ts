@@ -1,14 +1,9 @@
-import { ref, update, set, increment } from "firebase/database";
-import { db } from "@/lib/firebase";
+import { socket } from "./socket";
 
-/** Atomically bump the unread counter for a recipient when a message is sent. */
-export async function incrementUnread(recipientUid: string, senderUid: string) {
-  await update(ref(db, `unread/${recipientUid}`), {
-    [senderUid]: increment(1),
-  });
-}
-
-/** Reset the unread count to 0 when the current user opens a conversation. */
-export async function markAsRead(currentUid: string, otherUid: string) {
-  await set(ref(db, `unread/${currentUid}/${otherUid}`), 0);
+/**
+ * Tell the server to reset the unread counter for messages received from `senderUid`.
+ * Called when the current user opens a conversation.
+ */
+export function markAsRead(_currentUid: string, senderUid: string) {
+  socket.emit("mark_read", { senderUid });
 }

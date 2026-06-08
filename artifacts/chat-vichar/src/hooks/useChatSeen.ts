@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import { ref, update, onValue } from "firebase/database";
-import { db } from "@/lib/firebase";
+import { socket } from "@/lib/socket";
 
 /**
- * - Writes `chats/{chatId}/seen/{currentUid}` = Date.now() when the chat is opened.
- *   Uses update() on the seen sub-node so no sibling data is ever touched.
- * - Returns the timestamp (ms) of when the *recipient* last opened this chat.
- *   Used to decide whether a sent message has been "seen".
+ * - Emits `mark_seen` when a chat is opened (tells server the current user saw it).
+ * - Listens for `seen_update` to know when the *recipient* opens our chat.
+ * - Returns the timestamp (ms) when the recipient last saw this chat.
  */
 export function useChatSeen(
   chatId: string | null,
@@ -15,24 +13,31 @@ export function useChatSeen(
 ): number {
   const [recipientSeenAt, setRecipientSeenAt] = useState(0);
 
-  // Mark this chat as seen by the current user whenever they have it open.
-  // update() on the seen sub-node — never overwrites messages.
   useEffect(() => {
-    if (!chatId || !currentUid) return;
-    update(ref(db, `chats/${chatId}/seen`), {
-      [currentUid]: Date.now(),
-    });
-  }, [chatId, currentUid]);
+    if (!chatId || !currentUid || !recipientUid) return;
 
-  // Listen to when the recipient last saw this chat
-  useEffect(() => {
-    if (!chatId || !recipientUid) return;
-    const seenRef = ref(db, `chats/${chatId}/seen/${recipientUid}`);
-    const unsub = onValue(seenRef, (snap) => {
-      setRecipientSeenAt(snap.exists() ? (snap.val() as number) : 0);
-    });
-    return unsub;
-  }, [chatId, recipientUid]);
+    // Tell the server (and the other participant) that we've seen this chat
+    socket.emit("mark_seen", { chatId, senderUid: recipientUid });
+
+    // Listen for the other person opening our messages
+    const handleSeenUpdate = ({
+      chatId: id,
+      uid,
+      seenAt,
+    }: {
+      chatId: string;
+      uid: string;
+      seenAt: number;
+    }) => {
+      if (id !== chatId || uid !== recipientUid) return;
+      setRecipientSeenAt(seenAt);
+    };
+
+    socket.on("seen_update", handleSeenUpdate);
+    return () => {
+      socket.off("seen_update", handleSeenUpdate);
+    };
+  }, [chatId, currentUid, recipientUid]);
 
   return recipientSeenAt;
 }
