@@ -63,7 +63,7 @@ export async function getAllUsers(): Promise<Record<string, StoredUser>> {
     keys.map(async (key) => {
       const uid = key.replace("user:", "");
       const info = (await client.get(key)) as StoredUser | null;
-      if (info) users[uid] = info;
+      if (info) users[uid] = { ...info, uid }; // backfill uid in case old entry is missing it
     })
   );
   return users;

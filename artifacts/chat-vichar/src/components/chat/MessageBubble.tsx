@@ -14,82 +14,76 @@ interface MessageBubbleProps {
   isCurrentUser: boolean;
   status: MessageStatus;
   onReply: (message: Message) => void;
+  searchQuery?: string;
+  isCurrentMatch?: boolean;
 }
 
 /** WhatsApp-style tick(s) SVG rendered inline */
 function StatusTicks({ status }: { status: MessageStatus }) {
   const seen = status === "seen";
   const double = status === "delivered" || status === "seen";
-  const color = seen ? "#60a5fa" : "currentColor"; // blue-400 when seen, else inherit
+  const color = seen ? "#60a5fa" : "currentColor";
 
   return (
     <span
-      className={cn(
-        "inline-flex items-center shrink-0",
-        seen ? "text-blue-400" : "text-primary-foreground/50"
-      )}
+      className={cn("inline-flex items-center shrink-0", seen ? "text-blue-400" : "text-primary-foreground/50")}
       aria-label={status}
       data-testid={`tick-${status}`}
     >
       {double ? (
-        /* Double tick — overlapping checkmarks */
-        <svg
-          width="18"
-          height="11"
-          viewBox="0 0 18 11"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {/* Back check */}
-          <polyline
-            points="1,5.5 4.5,9 10,2"
-            stroke={color}
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Front check (offset right) */}
-          <polyline
-            points="6,5.5 9.5,9 16,1.5"
-            stroke={color}
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+        <svg width="18" height="11" viewBox="0 0 18 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polyline points="1,5.5 4.5,9 10,2" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline points="6,5.5 9.5,9 16,1.5" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ) : (
-        /* Single tick */
-        <svg
-          width="11"
-          height="11"
-          viewBox="0 0 11 11"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <polyline
-            points="1,5.5 4.5,9 10,1.5"
-            stroke={color}
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polyline points="1,5.5 4.5,9 10,1.5" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )}
     </span>
   );
 }
 
-export function MessageBubble({ message, isCurrentUser, status, onReply }: MessageBubbleProps) {
+/** Highlights occurrences of `query` inside `text` */
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  if (!query.trim()) return <>{text}</>;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+  const lq = query.toLowerCase();
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === lq ? (
+          <mark
+            key={i}
+            className="bg-yellow-300 text-yellow-900 rounded-sm px-[1px] not-italic"
+          >
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
+export function MessageBubble({
+  message,
+  isCurrentUser,
+  status,
+  onReply,
+  searchQuery = "",
+  isCurrentMatch = false,
+}: MessageBubbleProps) {
   const [showTime, setShowTime] = useState(false);
 
   return (
     <motion.div
+      data-message-id={message.id}
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      className={cn(
-        "flex w-full group mb-4",
-        isCurrentUser ? "justify-end" : "justify-start"
-      )}
+      className={cn("flex w-full group mb-4", isCurrentUser ? "justify-end" : "justify-start")}
     >
       <div className={cn("flex max-w-[75%] gap-2", isCurrentUser ? "flex-row-reverse" : "flex-row")}>
         {!isCurrentUser && (
@@ -142,10 +136,11 @@ export function MessageBubble({ message, isCurrentUser, status, onReply }: Messa
             {/* Bubble */}
             <div
               className={cn(
-                "px-4 py-2.5 rounded-2xl relative shadow-sm cursor-pointer",
+                "px-4 py-2.5 rounded-2xl relative shadow-sm cursor-pointer transition-shadow duration-200",
                 isCurrentUser
                   ? "bg-primary text-primary-foreground rounded-br-sm"
-                  : "bg-card border border-border text-card-foreground rounded-bl-sm"
+                  : "bg-card border border-border text-card-foreground rounded-bl-sm",
+                isCurrentMatch && "ring-2 ring-yellow-400 ring-offset-1 shadow-yellow-200/50 shadow-lg"
               )}
               onClick={() => setShowTime(!showTime)}
             >
@@ -153,38 +148,29 @@ export function MessageBubble({ message, isCurrentUser, status, onReply }: Messa
               {message.media && (
                 <div className={cn("rounded-lg overflow-hidden", message.text ? "mb-2" : "mb-0")}>
                   {message.media.mediaType === "image" && (
-                    <img
-                      src={message.media.url}
-                      alt="Attachment"
-                      className="max-h-[250px] w-auto object-cover rounded-md"
-                      loading="lazy"
-                    />
+                    <img src={message.media.url} alt="Attachment" className="max-h-[250px] w-auto object-cover rounded-md" loading="lazy" />
                   )}
                   {message.media.mediaType === "video" && (
-                    <video
-                      src={message.media.url}
-                      controls
-                      className="max-h-[250px] w-auto rounded-md"
-                    />
+                    <video src={message.media.url} controls className="max-h-[250px] w-auto rounded-md" />
                   )}
                   {message.media.mediaType === "audio" && (
-                    <audio
-                      src={message.media.url}
-                      controls
-                      className="max-w-[220px] h-10"
-                    />
+                    <audio src={message.media.url} controls className="max-w-[220px] h-10" />
                   )}
                 </div>
               )}
 
-              {/* Text */}
+              {/* Text with optional highlighting */}
               {message.text && (
                 <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">
-                  {message.text}
+                  {searchQuery ? (
+                    <HighlightedText text={message.text} query={searchQuery} />
+                  ) : (
+                    message.text
+                  )}
                 </p>
               )}
 
-              {/* Timestamp + ticks row */}
+              {/* Timestamp + ticks */}
               <div
                 className={cn(
                   "flex items-center justify-end gap-1 mt-1",

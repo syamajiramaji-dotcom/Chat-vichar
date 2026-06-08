@@ -129,14 +129,14 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser, unreadCounts 
               </p>
             </div>
           ) : (
-            filteredUsers.map((u) => {
+            filteredUsers.map((u, idx) => {
               const isSelected = selectedUser?.uid === u.uid;
               const initial = (u.displayName || u.email || "U").charAt(0).toUpperCase();
               const unread = unreadCounts[u.uid] ?? 0;
 
               return (
                 <button
-                  key={u.uid}
+                  key={u.uid || `user-${idx}`}
                   data-testid={`user-item-${u.uid}`}
                   onClick={() => onSelectUser(u)}
                   className={cn(
