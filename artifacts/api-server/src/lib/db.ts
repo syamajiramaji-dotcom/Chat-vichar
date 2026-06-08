@@ -24,6 +24,13 @@ export interface StoredMessage {
 
 const MAX_MESSAGES = 200;
 
+/** Safely coerce whatever list() returns into a string array */
+function toStringArray(val: unknown): string[] {
+  if (Array.isArray(val)) return val as string[];
+  if (val && typeof val === "object") return Object.keys(val as object);
+  return [];
+}
+
 export async function addMessage(chatId: string, message: StoredMessage): Promise<void> {
   const key = `chat:${chatId}:messages`;
   const existing = (await client.get(key)) as StoredMessage[] | null;
@@ -50,7 +57,7 @@ export async function getUser(uid: string): Promise<StoredUser | null> {
 }
 
 export async function getAllUsers(): Promise<Record<string, StoredUser>> {
-  const keys = (await client.list("user:")) as string[];
+  const keys = toStringArray(await client.list("user:"));
   const users: Record<string, StoredUser> = {};
   await Promise.all(
     keys.map(async (key) => {
@@ -75,7 +82,7 @@ export async function resetUnread(recipientUid: string, senderUid: string): Prom
 }
 
 export async function getUnreadCounts(uid: string): Promise<Record<string, number>> {
-  const keys = (await client.list(`unread:${uid}:`)) as string[];
+  const keys = toStringArray(await client.list(`unread:${uid}:`));
   const counts: Record<string, number> = {};
   await Promise.all(
     keys.map(async (key) => {

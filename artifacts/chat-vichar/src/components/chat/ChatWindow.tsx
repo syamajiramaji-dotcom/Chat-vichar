@@ -3,12 +3,14 @@ import { User } from "firebase/auth";
 import { ChatUser, Message } from "@/types/chat";
 import { getChatId, useMessages } from "@/hooks/useMessages";
 import { useChatSeen } from "@/hooks/useChatSeen";
+import { socket } from "@/lib/socket";
 import { MessageBubble, MessageStatus } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ChatWindowProps {
   currentUser: User;
@@ -22,7 +24,6 @@ function getMessageStatus(
   recipientOnline: boolean,
   recipientSeenAt: number
 ): MessageStatus {
-  // Only compute status for messages sent by the current user
   if (message.senderId !== currentUid) return "sent";
   if (recipientSeenAt > 0 && message.timestamp <= recipientSeenAt) return "seen";
   if (recipientOnline) return "delivered";
@@ -34,14 +35,47 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
   const { messages, sendMessage } = useMessages(chatId, currentUser.uid, selectedUser.uid);
   const recipientSeenAt = useChatSeen(chatId, currentUser.uid, selectedUser.uid);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [isRecipientTyping, setIsRecipientTyping] = useState(false);
+  const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when messages change
+  // Listen for typing events from the recipient
+  useEffect(() => {
+    const handleTyping = ({
+      chatId: incomingChatId,
+      uid,
+      isTyping,
+    }: {
+      chatId: string;
+      uid: string;
+      isTyping: boolean;
+    }) => {
+      if (incomingChatId !== chatId || uid !== selectedUser.uid) return;
+
+      setIsRecipientTyping(isTyping);
+
+      // Safety net: auto-clear after 4s in case typing_stop never arrives
+      if (isTyping) {
+        if (typingClearRef.current) clearTimeout(typingClearRef.current);
+        typingClearRef.current = setTimeout(() => setIsRecipientTyping(false), 4000);
+      } else {
+        if (typingClearRef.current) clearTimeout(typingClearRef.current);
+      }
+    };
+
+    socket.on("typing", handleTyping);
+    return () => {
+      socket.off("typing", handleTyping);
+      if (typingClearRef.current) clearTimeout(typingClearRef.current);
+    };
+  }, [chatId, selectedUser.uid]);
+
+  // Auto-scroll to bottom when messages change or typing indicator appears
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isRecipientTyping]);
 
   const handleSendMessage = async (args: any) => {
     await sendMessage({
@@ -50,6 +84,33 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
       senderPhotoURL: currentUser.photoURL,
     });
   };
+
+  const handleTypingStart = () => {
+    socket.emit("typing_start", { chatId, recipientUid: selectedUser.uid });
+  };
+
+  const handleTypingStop = () => {
+    socket.emit("typing_stop", { chatId, recipientUid: selectedUser.uid });
+  };
+
+  const headerSubline = isRecipientTyping ? (
+    <span className="text-xs text-primary font-medium flex items-center gap-1">
+      typing
+      <span className="inline-flex gap-[3px] items-end mb-[1px]">
+        <span className="w-[3px] h-[3px] rounded-full bg-primary animate-bounce [animation-delay:0ms]" />
+        <span className="w-[3px] h-[3px] rounded-full bg-primary animate-bounce [animation-delay:150ms]" />
+        <span className="w-[3px] h-[3px] rounded-full bg-primary animate-bounce [animation-delay:300ms]" />
+      </span>
+    </span>
+  ) : (
+    <span className="text-xs text-muted-foreground">
+      {selectedUser.online
+        ? "Online"
+        : selectedUser.lastSeen
+        ? `Last seen ${formatDistanceToNow(selectedUser.lastSeen, { addSuffix: true })}`
+        : "Offline"}
+    </span>
+  );
 
   return (
     <div className="flex flex-col h-full w-full relative bg-background">
@@ -80,13 +141,17 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
             <span className="font-semibold text-foreground">
               {selectedUser.displayName || selectedUser.email || "Unknown"}
             </span>
-            <span className="text-xs text-muted-foreground">
-              {selectedUser.online
-                ? "Online"
-                : selectedUser.lastSeen
-                ? `Last seen ${formatDistanceToNow(selectedUser.lastSeen, { addSuffix: true })}`
-                : "Offline"}
-            </span>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={isRecipientTyping ? "typing" : "status"}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
+                transition={{ duration: 0.15 }}
+              >
+                {headerSubline}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>
@@ -130,6 +195,31 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
                   />
                 );
               })}
+
+              {/* Typing indicator bubble */}
+              <AnimatePresence>
+                {isRecipientTyping && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    transition={{ duration: 0.18 }}
+                    className="flex items-end gap-2 mb-4"
+                  >
+                    <Avatar className="w-8 h-8 shrink-0">
+                      <AvatarImage src={selectedUser.photoURL || undefined} />
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                        {(selectedUser.displayName || "U").charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm flex items-center gap-[5px]">
+                      <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:0ms]" />
+                      <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:150ms]" />
+                      <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:300ms]" />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -141,6 +231,8 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
           onSendMessage={handleSendMessage}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
+          onTypingStart={handleTypingStart}
+          onTypingStop={handleTypingStop}
         />
       </div>
     </div>

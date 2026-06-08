@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Message, ReplyTo } from "@/types/chat";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Send, Image as ImageIcon, FileVideo, Mic, Square, Loader2 } from "lucide-react";
+import { X, Send, Image as ImageIcon, Mic, Square, Loader2 } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { cn } from "@/lib/utils";
@@ -15,14 +15,24 @@ interface MessageInputProps {
   }) => Promise<void>;
   replyTo: Message | null;
   onCancelReply: () => void;
+  onTypingStart: () => void;
+  onTypingStop: () => void;
 }
 
-export function MessageInput({ onSendMessage, replyTo, onCancelReply }: MessageInputProps) {
+export function MessageInput({
+  onSendMessage,
+  replyTo,
+  onCancelReply,
+  onTypingStart,
+  onTypingStop,
+}: MessageInputProps) {
   const [text, setText] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
+
   const {
     isRecording,
     duration,
@@ -30,14 +40,63 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply }: MessageI
     stopRecording,
     cancelRecording,
     audioBlob,
-    reset: resetVoice
+    reset: resetVoice,
   } = useVoiceRecorder();
+
+  // Debounced stop: fires 2s after the user stops typing
+  const scheduleTypingStop = useCallback(() => {
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        onTypingStop();
+      }
+    }, 2000);
+  }, [onTypingStop]);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setText(val);
+
+    if (val.trim()) {
+      if (!isTypingRef.current) {
+        isTypingRef.current = true;
+        onTypingStart();
+      }
+      scheduleTypingStop();
+    } else {
+      // Input cleared — stop typing immediately
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        onTypingStop();
+      }
+    }
+  };
+
+  // Always stop typing indicator when component unmounts or chat changes
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        onTypingStop();
+      }
+    };
+  }, [onTypingStop]);
 
   const handleSend = async () => {
     if (!text.trim() && !audioBlob) return;
-    
+
+    // Stop typing indicator immediately on send
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      onTypingStop();
+    }
+
     let mediaData = undefined;
-    
+
     if (audioBlob) {
       setIsUploading(true);
       try {
@@ -51,19 +110,16 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply }: MessageI
       }
     }
 
-    const replyObj = replyTo ? {
-      messageId: replyTo.id,
-      text: replyTo.text,
-      senderName: replyTo.senderName,
-      mediaType: replyTo.media?.mediaType
-    } : undefined;
+    const replyObj = replyTo
+      ? {
+          messageId: replyTo.id,
+          text: replyTo.text,
+          senderName: replyTo.senderName,
+          mediaType: replyTo.media?.mediaType,
+        }
+      : undefined;
 
-    await onSendMessage({
-      text: text.trim() ? text.trim() : undefined,
-      media: mediaData,
-      replyTo: replyObj
-    });
-
+    await onSendMessage({ text: text.trim() || undefined, media: mediaData, replyTo: replyObj });
     setText("");
     onCancelReply();
   };
@@ -83,17 +139,15 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply }: MessageI
     setUploadProgress(0);
     try {
       const mediaData = await uploadToCloudinary(file, setUploadProgress);
-      const replyObj = replyTo ? {
-        messageId: replyTo.id,
-        text: replyTo.text,
-        senderName: replyTo.senderName,
-        mediaType: replyTo.media?.mediaType
-      } : undefined;
-
-      await onSendMessage({
-        media: mediaData,
-        replyTo: replyObj
-      });
+      const replyObj = replyTo
+        ? {
+            messageId: replyTo.id,
+            text: replyTo.text,
+            senderName: replyTo.senderName,
+            mediaType: replyTo.media?.mediaType,
+          }
+        : undefined;
+      await onSendMessage({ media: mediaData, replyTo: replyObj });
       onCancelReply();
     } catch (err) {
       console.error(err);
@@ -103,11 +157,8 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply }: MessageI
     }
   };
 
-  // Voice recording stop handler
   useEffect(() => {
-    if (audioBlob) {
-      handleSend();
-    }
+    if (audioBlob) handleSend();
   }, [audioBlob]);
 
   const formatDuration = (secs: number) => {
@@ -120,7 +171,7 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply }: MessageI
     <div className="p-4 bg-background border-t border-border flex flex-col gap-2 relative">
       {isUploading && (
         <div className="absolute top-0 left-0 w-full h-1 bg-muted overflow-hidden">
-          <div 
+          <div
             className="h-full bg-primary transition-all duration-300"
             style={{ width: `${uploadProgress}%` }}
           />
@@ -130,31 +181,38 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply }: MessageI
       {replyTo && (
         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border text-sm mb-2">
           <div className="flex flex-col min-w-0">
-            <span className="font-medium text-xs text-primary mb-0.5">Replying to {replyTo.senderName}</span>
+            <span className="font-medium text-xs text-primary mb-0.5">
+              Replying to {replyTo.senderName}
+            </span>
             <span className="text-muted-foreground truncate">
               {replyTo.text || (replyTo.media ? `[${replyTo.media.mediaType}]` : "Message")}
             </span>
           </div>
-          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 ml-2" onClick={onCancelReply}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0 ml-2"
+            onClick={onCancelReply}
+          >
             <X className="w-4 h-4" />
           </Button>
         </div>
       )}
 
       <div className="flex items-end gap-2">
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          className="hidden" 
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
           accept="image/*,video/*"
-          onChange={handleFileSelect} 
+          onChange={handleFileSelect}
         />
-        
+
         {!isRecording && (
           <div className="flex gap-1 shrink-0 pb-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="text-muted-foreground hover:text-foreground h-10 w-10 rounded-full"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
@@ -173,10 +231,20 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply }: MessageI
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={cancelRecording} className="text-muted-foreground hover:text-destructive">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cancelRecording}
+                className="text-muted-foreground hover:text-destructive"
+              >
                 Cancel
               </Button>
-              <Button variant="destructive" size="icon" onClick={stopRecording} className="h-8 w-8 rounded-full">
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={stopRecording}
+                className="h-8 w-8 rounded-full"
+              >
                 <Square className="w-3 h-3 fill-current" />
               </Button>
             </div>
@@ -185,7 +253,7 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply }: MessageI
           <div className="flex-1 relative bg-card border border-border rounded-2xl overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:border-transparent transition-all">
             <Textarea
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={handleTextChange}
               onKeyDown={handleKeyDown}
               placeholder="Type a message..."
               className="min-h-[52px] max-h-[150px] resize-none border-0 focus-visible:ring-0 bg-transparent py-3.5 px-4 scrollbar-thin"
@@ -197,20 +265,24 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply }: MessageI
         {!isRecording && (
           <div className="shrink-0 pb-1 flex gap-1">
             {text.trim() ? (
-              <Button 
-                onClick={handleSend} 
+              <Button
+                onClick={handleSend}
                 disabled={isUploading}
-                size="icon" 
+                size="icon"
                 className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground transition-transform active:scale-95"
               >
-                {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 ml-0.5" />}
+                {isUploading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5 ml-0.5" />
+                )}
               </Button>
             ) : (
-              <Button 
+              <Button
                 onClick={startRecording}
                 disabled={isUploading}
                 variant="secondary"
-                size="icon" 
+                size="icon"
                 className="h-10 w-10 rounded-full transition-transform active:scale-95"
               >
                 <Mic className="w-5 h-5" />
