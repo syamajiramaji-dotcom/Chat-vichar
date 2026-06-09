@@ -33,6 +33,7 @@ export interface Message {
   replyTo?: ReplyTo;
   timestamp: number;
   reactions?: Record<string, string[]>; // emoji → [uid, uid, ...]
+  deleted?: boolean;
 }
 
 export interface Conversation {

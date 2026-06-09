@@ -21,6 +21,7 @@ export interface StoredMessage {
   replyTo?: object;
   reactions?: Record<string, string[]>;
   timestamp: number;
+  deleted?: boolean;
 }
 
 const MAX_MESSAGES = 200;
@@ -69,6 +70,24 @@ export async function addMessage(chatId: string, message: StoredMessage): Promis
 export async function getMessages(chatId: string): Promise<StoredMessage[]> {
   const messages = await dbGet<StoredMessage[]>(`chat:${chatId}:messages`);
   return Array.isArray(messages) ? messages : [];
+}
+
+export async function deleteMessage(chatId: string, messageId: string): Promise<boolean> {
+  const key = `chat:${chatId}:messages`;
+  const messages = await getMessages(chatId);
+  const idx = messages.findIndex((m) => m.id === messageId);
+  if (idx < 0) return false;
+  // Preserve id/senderId/timestamp so the stub renders correctly on both sides
+  messages[idx] = {
+    id: messages[idx].id,
+    senderId: messages[idx].senderId,
+    senderName: messages[idx].senderName,
+    senderPhotoURL: messages[idx].senderPhotoURL,
+    timestamp: messages[idx].timestamp,
+    deleted: true,
+  };
+  await client.set(key, messages);
+  return true;
 }
 
 export async function toggleReaction(
@@ -157,4 +176,18 @@ export async function setSeen(chatId: string, uid: string, timestamp: number): P
 export async function getSeen(chatId: string, uid: string): Promise<number> {
   const val = await dbGet<number>(`seen:${chatId}:${uid}`);
   return typeof val === "number" ? val : 0;
+}
+
+// ── Push subscriptions ────────────────────────────────────────────────────────
+
+export async function savePushSubscription(uid: string, subscription: object): Promise<void> {
+  await client.set(`push:${uid}`, subscription);
+}
+
+export async function getPushSubscription(uid: string): Promise<object | null> {
+  return dbGet<object>(`push:${uid}`);
+}
+
+export async function deletePushSubscription(uid: string): Promise<void> {
+  await client.delete(`push:${uid}`);
 }

@@ -1,7 +1,34 @@
 import { Server } from "socket.io";
 import type { Server as HttpServer } from "node:http";
+import webpush from "web-push";
 import { logger } from "../lib/logger";
 import * as db from "../lib/db";
+
+// ── VAPID configuration ───────────────────────────────────────────────────────
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || "mailto:chatvichar@admin.com",
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
+
+async function sendPushToUser(recipientUid: string, payload: object) {
+  if (!process.env.VAPID_PUBLIC_KEY) return;
+  try {
+    const sub = await db.getPushSubscription(recipientUid);
+    if (!sub) return;
+    await webpush.sendNotification(
+      sub as webpush.PushSubscription,
+      JSON.stringify(payload)
+    );
+  } catch (err: unknown) {
+    // 410 Gone means subscription expired — remove it
+    if ((err as { statusCode?: number }).statusCode === 410) {
+      await db.deletePushSubscription(recipientUid);
+    }
+  }
+}
 
 export function setupSocket(httpServer: HttpServer) {
   const io = new Server(httpServer, {
@@ -13,7 +40,6 @@ export function setupSocket(httpServer: HttpServer) {
     logger.info({ socketId: socket.id }, "Socket connected");
 
     // ── authenticate ────────────────────────────────────────────────────────
-    // Client sends this immediately after Firebase auth resolves
     socket.on(
       "authenticate",
       async (info: {
@@ -25,17 +51,12 @@ export function setupSocket(httpServer: HttpServer) {
         const { uid } = info;
         socket.data.uid = uid;
 
-        // Join a personal room so we can deliver messages to this user
         await socket.join(`user:${uid}`);
-
-        // Persist / update user info
         await db.setUser(uid, { ...info, online: true, lastSeen: Date.now() });
 
-        // Send this user their current unread counts
         const counts = await db.getUnreadCounts(uid);
         socket.emit("unread_counts", { counts });
 
-        // Broadcast updated roster to every connected client
         const users = await db.getAllUsers();
         io.emit("users_update", { users });
 
@@ -78,18 +99,63 @@ export function setupSocket(httpServer: HttpServer) {
 
         await db.addMessage(chatId, message);
 
-        // Deliver to recipient
         io.to(`user:${recipientUid}`).emit("new_message", { chatId, message });
-
-        // Deliver to sender's other sessions (not this socket)
         socket.to(`user:${senderUid}`).emit("new_message", { chatId, message });
 
-        // Increment and forward unread counter for recipient
         const newCount = await db.incrementUnread(recipientUid, senderUid);
         io.to(`user:${recipientUid}`).emit("unread_update", {
           senderUid,
           count: newCount,
         });
+
+        // Send a push notification if the recipient has no active sockets
+        const recipientRoom = io.sockets.adapter.rooms.get(`user:${recipientUid}`);
+        const recipientOnline = recipientRoom && recipientRoom.size > 0;
+        if (!recipientOnline) {
+          const sender = await db.getUser(senderUid);
+          const senderName = sender?.displayName || message.senderName || "Someone";
+          const body = message.text
+            ? message.text.slice(0, 80) + (message.text.length > 80 ? "…" : "")
+            : message.media
+            ? "📎 Sent an attachment"
+            : "New message";
+          await sendPushToUser(recipientUid, {
+            title: senderName,
+            body,
+            tag: `chat-${chatId}`,
+            url: "/",
+          });
+        }
+      }
+    );
+
+    // ── delete_message ────────────────────────────────────────────────────────
+    socket.on(
+      "delete_message",
+      async ({
+        chatId,
+        messageId,
+        recipientUid,
+        deleteForEveryone,
+      }: {
+        chatId: string;
+        messageId: string;
+        recipientUid: string;
+        deleteForEveryone: boolean;
+      }) => {
+        const uid = socket.data.uid as string | undefined;
+        if (!uid) return;
+
+        if (deleteForEveryone) {
+          const ok = await db.deleteMessage(chatId, messageId);
+          if (!ok) return;
+          const payload = { chatId, messageId, deleteForEveryone: true };
+          io.to(`user:${uid}`).emit("message_deleted", payload);
+          io.to(`user:${recipientUid}`).emit("message_deleted", payload);
+        } else {
+          // Delete for me — server does nothing; client handles it locally
+          socket.emit("message_deleted", { chatId, messageId, deleteForEveryone: false });
+        }
       }
     );
 
@@ -102,7 +168,6 @@ export function setupSocket(httpServer: HttpServer) {
     });
 
     // ── mark_seen ────────────────────────────────────────────────────────────
-    // recipient emits this when they open the chat; senderUid = the other person
     socket.on(
       "mark_seen",
       async ({ chatId, senderUid }: { chatId: string; senderUid: string }) => {
@@ -110,7 +175,6 @@ export function setupSocket(httpServer: HttpServer) {
         if (!uid) return;
         const seenAt = Date.now();
         await db.setSeen(chatId, uid, seenAt);
-        // Notify the sender that messages were seen
         io.to(`user:${senderUid}`).emit("seen_update", { chatId, uid, seenAt });
       }
     );
@@ -133,9 +197,18 @@ export function setupSocket(httpServer: HttpServer) {
         if (!uid) return;
         const reactions = await db.toggleReaction(chatId, messageId, emoji, uid);
         const payload = { chatId, messageId, reactions };
-        // Send to both participants
         io.to(`user:${uid}`).emit("reaction_update", payload);
         io.to(`user:${recipientUid}`).emit("reaction_update", payload);
+      }
+    );
+
+    // ── push_subscribe ────────────────────────────────────────────────────────
+    socket.on(
+      "push_subscribe",
+      async ({ subscription }: { subscription: object }) => {
+        const uid = socket.data.uid as string | undefined;
+        if (!uid || !subscription) return;
+        await db.savePushSubscription(uid, subscription);
       }
     );
 

@@ -6,12 +6,42 @@ export function getChatId(uid1: string, uid2: string) {
   return [uid1, uid2].sort().join("_");
 }
 
+const DELETED_FOR_ME_KEY = (uid: string, chatId: string) =>
+  `deletedForMe:${uid}:${chatId}`;
+
+function loadDeletedForMe(uid: string, chatId: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(DELETED_FOR_ME_KEY(uid, chatId));
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDeletedForMe(uid: string, chatId: string, ids: Set<string>) {
+  try {
+    localStorage.setItem(DELETED_FOR_ME_KEY(uid, chatId), JSON.stringify([...ids]));
+  } catch {
+    // ignore
+  }
+}
+
 export function useMessages(
   chatId: string | null,
   currentUid: string,
   recipientUid: string
 ) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [deletedForMe, setDeletedForMe] = useState<Set<string>>(new Set());
+
+  // Load persisted "delete for me" list whenever chatId/user changes
+  useEffect(() => {
+    if (!chatId) {
+      setDeletedForMe(new Set());
+      return;
+    }
+    setDeletedForMe(loadDeletedForMe(currentUid, chatId));
+  }, [chatId, currentUid]);
 
   useEffect(() => {
     if (!chatId) {
@@ -59,14 +89,47 @@ export function useMessages(
       );
     };
 
+    const handleMessageDeleted = ({
+      chatId: deletedChatId,
+      messageId,
+      deleteForEveryone,
+    }: {
+      chatId: string;
+      messageId: string;
+      deleteForEveryone: boolean;
+    }) => {
+      if (deletedChatId !== chatId) return;
+
+      if (deleteForEveryone) {
+        // Mark as deleted in state so both sides see the stub
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId
+              ? { ...m, deleted: true, text: undefined, media: undefined, reactions: undefined, replyTo: undefined }
+              : m
+          )
+        );
+      } else {
+        // Delete for me — add to local set and persist
+        setDeletedForMe((prev) => {
+          const next = new Set(prev);
+          next.add(messageId);
+          saveDeletedForMe(currentUid, chatId, next);
+          return next;
+        });
+      }
+    };
+
     socket.on("new_message", handleNewMessage);
     socket.on("reaction_update", handleReactionUpdate);
+    socket.on("message_deleted", handleMessageDeleted);
 
     return () => {
       socket.off("new_message", handleNewMessage);
       socket.off("reaction_update", handleReactionUpdate);
+      socket.off("message_deleted", handleMessageDeleted);
     };
-  }, [chatId]);
+  }, [chatId, currentUid]);
 
   const sendMessage = useCallback(
     async ({
@@ -101,5 +164,21 @@ export function useMessages(
     [chatId, currentUid, recipientUid]
   );
 
-  return { messages, sendMessage };
+  const deleteMessage = useCallback(
+    (messageId: string, deleteForEveryone: boolean) => {
+      if (!chatId) return;
+      socket.emit("delete_message", {
+        chatId,
+        messageId,
+        recipientUid,
+        deleteForEveryone,
+      });
+    },
+    [chatId, recipientUid]
+  );
+
+  // Filter out "deleted for me" messages before returning
+  const visibleMessages = messages.filter((m) => !deletedForMe.has(m.id));
+
+  return { messages: visibleMessages, sendMessage, deleteMessage };
 }

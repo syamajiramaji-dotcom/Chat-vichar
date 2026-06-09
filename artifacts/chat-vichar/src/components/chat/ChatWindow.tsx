@@ -3,6 +3,7 @@ import { User } from "firebase/auth";
 import { ChatUser, Message } from "@/types/chat";
 import { getChatId, useMessages } from "@/hooks/useMessages";
 import { useChatSeen } from "@/hooks/useChatSeen";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { socket } from "@/lib/socket";
 import { MessageBubble, MessageStatus } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
@@ -33,12 +34,15 @@ function getMessageStatus(
 
 export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProps) {
   const chatId = getChatId(currentUser.uid, selectedUser.uid);
-  const { messages, sendMessage } = useMessages(chatId, currentUser.uid, selectedUser.uid);
+  const { messages, sendMessage, deleteMessage } = useMessages(chatId, currentUser.uid, selectedUser.uid);
   const recipientSeenAt = useChatSeen(chatId, currentUser.uid, selectedUser.uid);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [isRecipientTyping, setIsRecipientTyping] = useState(false);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Initialise push notifications for this user
+  usePushNotifications(currentUser.uid);
 
   // --- Search state ---
   const [searchOpen, setSearchOpen] = useState(false);
@@ -46,19 +50,18 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
   const [currentMatchIdx, setCurrentMatchIdx] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // IDs of messages that contain the search query
   const matchedIds = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase();
-    return messages.filter((m) => m.text?.toLowerCase().includes(q)).map((m) => m.id);
+    return messages
+      .filter((m) => !m.deleted && m.text?.toLowerCase().includes(q))
+      .map((m) => m.id);
   }, [messages, searchQuery]);
 
-  // Reset current index whenever the result set changes
   useEffect(() => {
     setCurrentMatchIdx(0);
   }, [matchedIds.length, searchQuery]);
 
-  // Scroll to current match
   useEffect(() => {
     if (matchedIds.length === 0) return;
     const id = matchedIds[currentMatchIdx];
@@ -66,20 +69,17 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [currentMatchIdx, matchedIds]);
 
-  // Open search bar
   const openSearch = useCallback(() => {
     setSearchOpen(true);
     setTimeout(() => searchInputRef.current?.focus(), 60);
   }, []);
 
-  // Close and clear search
   const closeSearch = useCallback(() => {
     setSearchOpen(false);
     setSearchQuery("");
     setCurrentMatchIdx(0);
   }, []);
 
-  // Navigate between matches
   const goNext = useCallback(() => {
     if (matchedIds.length === 0) return;
     setCurrentMatchIdx((i) => (i + 1) % matchedIds.length);
@@ -90,7 +90,6 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
     setCurrentMatchIdx((i) => (i - 1 + matchedIds.length) % matchedIds.length);
   }, [matchedIds.length]);
 
-  // Keyboard shortcut: Escape closes search
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && searchOpen) closeSearch();
@@ -103,7 +102,6 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
     return () => window.removeEventListener("keydown", onKey);
   }, [searchOpen, openSearch, closeSearch]);
 
-  // Clear search when switching chats
   useEffect(() => {
     closeSearch();
   }, [selectedUser.uid]);
@@ -131,7 +129,6 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
     };
   }, [chatId, selectedUser.uid]);
 
-  // Auto-scroll to bottom on new messages (only if not searching)
   useEffect(() => {
     if (searchOpen && searchQuery) return;
     if (scrollRef.current) {
@@ -139,7 +136,7 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
     }
   }, [messages, isRecipientTyping, searchOpen, searchQuery]);
 
-  const handleSendMessage = async (args: any) => {
+  const handleSendMessage = async (args: Parameters<typeof sendMessage>[0]) => {
     await sendMessage({
       ...args,
       senderName: currentUser.displayName || "User",
@@ -155,6 +152,13 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
       socket.emit("react_message", { chatId, messageId, emoji, recipientUid: selectedUser.uid });
     },
     [chatId, selectedUser.uid]
+  );
+
+  const handleDelete = useCallback(
+    (messageId: string, forEveryone: boolean) => {
+      deleteMessage(messageId, forEveryone);
+    },
+    [deleteMessage]
   );
 
   const headerSubline = isRecipientTyping ? (
@@ -233,7 +237,7 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
           </Button>
         </div>
 
-        {/* ── Search bar (slides in below header) ── */}
+        {/* ── Search bar ── */}
         <AnimatePresence>
           {searchOpen && (
             <motion.div
@@ -255,8 +259,6 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
                   placeholder="Search messages…"
                   className="h-8 border-0 shadow-none focus-visible:ring-0 bg-transparent px-1 text-sm flex-1"
                 />
-
-                {/* Match counter */}
                 <span className="text-xs text-muted-foreground shrink-0 min-w-[48px] text-center">
                   {searchQuery.trim()
                     ? matchedIds.length === 0
@@ -264,38 +266,15 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
                       : `${currentMatchIdx + 1} / ${matchedIds.length}`
                     : ""}
                 </span>
-
-                {/* Prev / Next */}
                 <div className="flex gap-0.5 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground"
-                    onClick={goPrev}
-                    disabled={matchedIds.length <= 1}
-                    title="Previous match (Shift+Enter)"
-                  >
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={goPrev} disabled={matchedIds.length <= 1} title="Previous (Shift+Enter)">
                     <ChevronUp className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground"
-                    onClick={goNext}
-                    disabled={matchedIds.length <= 1}
-                    title="Next match (Enter)"
-                  >
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={goNext} disabled={matchedIds.length <= 1} title="Next (Enter)">
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </div>
-
-                {/* Close */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground shrink-0"
-                  onClick={closeSearch}
-                >
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground shrink-0" onClick={closeSearch}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -337,6 +316,7 @@ export function ChatWindow({ currentUser, selectedUser, onBack }: ChatWindowProp
                     status={status}
                     onReply={setReplyTo}
                     onReact={handleReact}
+                    onDelete={handleDelete}
                     currentUserUid={currentUser.uid}
                     searchQuery={isAnyMatch ? searchQuery : ""}
                     isCurrentMatch={isCurrentMatch}
