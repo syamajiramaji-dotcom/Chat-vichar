@@ -16,25 +16,18 @@ export function ChatLayout() {
 
   const handleSelectUser = (u: ChatUser) => {
     setSelectedUser(u);
-    // Clear unread counter as soon as the conversation is opened
     markAsRead(user.uid, u.uid);
   };
 
-  const handleBack = () => {
-    setSelectedUser(null);
-  };
-
   return (
-    <div className="flex h-[100dvh] w-full bg-background overflow-hidden">
-      {/* Sidebar: always visible on md+; hidden on mobile when a chat is open */}
-      <div
-        className={[
-          "flex-shrink-0 h-full",
-          "w-full md:w-80 lg:w-96",
-          selectedUser ? "hidden md:flex" : "flex",
-          "flex-col",
-        ].join(" ")}
-      >
+    <div className="flex h-[100dvh] w-full overflow-hidden" style={{ background: "hsl(228 28% 6%)" }}>
+      {/* Sidebar */}
+      <div className={[
+        "flex-shrink-0 h-full",
+        "w-full md:w-80 lg:w-96",
+        selectedUser ? "hidden md:flex" : "flex",
+        "flex-col",
+      ].join(" ")}>
         <Sidebar
           currentUser={user}
           selectedUser={selectedUser}
@@ -43,30 +36,51 @@ export function ChatLayout() {
         />
       </div>
 
-      {/* Chat panel: always visible on md+; shown on mobile when a chat is open */}
-      <main
-        className={[
-          "flex-1 flex flex-col h-full bg-card/30 relative min-w-0",
-          selectedUser ? "flex" : "hidden md:flex",
-        ].join(" ")}
-      >
+      {/* Chat panel */}
+      <main className={[
+        "flex-1 flex flex-col h-full relative min-w-0",
+        selectedUser ? "flex" : "hidden md:flex",
+      ].join(" ")}
+        style={{ borderLeft: "1px solid rgba(124,58,237,.1)" }}>
         {selectedUser ? (
-          <ChatWindow
-            currentUser={user}
-            selectedUser={selectedUser}
-            onBack={handleBack}
-          />
+          <ChatWindow currentUser={user} selectedUser={selectedUser} onBack={() => setSelectedUser(null)} />
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-            <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-6">
-              <MessageSquare className="w-10 h-10 text-primary/50" />
+          /* ── Premium welcome state ── */
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 relative overflow-hidden">
+            {/* Background gradient orbs */}
+            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full pointer-events-none"
+              style={{ background: "radial-gradient(circle, rgba(124,58,237,.08) 0%, transparent 70%)" }} />
+
+            <div className="relative">
+              <div className="w-24 h-24 rounded-3xl flex items-center justify-center mb-6 mx-auto"
+                style={{
+                  background: "linear-gradient(135deg, rgba(124,58,237,.2), rgba(79,70,229,.15))",
+                  border: "1px solid rgba(124,58,237,.25)",
+                  boxShadow: "0 0 40px rgba(124,58,237,.12)"
+                }}>
+                <MessageSquare className="w-11 h-11" style={{ color: "#a78bfa" }} />
+              </div>
+              <div className="absolute inset-0 rounded-3xl blur-2xl opacity-20"
+                style={{ background: "radial-gradient(circle, rgba(124,58,237,.8), transparent)" }} />
             </div>
-            <h2 className="text-2xl font-medium text-foreground mb-2">
+
+            <h2 className="text-2xl font-bold gradient-text mb-2">
               Welcome to Chat-vichar
             </h2>
-            <p className="text-muted-foreground max-w-md">
-              Select a conversation from the sidebar to start messaging.
+            <p className="text-muted-foreground/70 max-w-xs text-sm leading-relaxed">
+              Select a conversation from the sidebar to start messaging securely.
             </p>
+
+            {/* Decorative dots */}
+            <div className="flex gap-2 mt-8">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="w-1.5 h-1.5 rounded-full animate-pulse"
+                  style={{
+                    background: "rgba(167,139,250,.4)",
+                    animationDelay: `${i * 300}ms`
+                  }} />
+              ))}
+            </div>
           </div>
         )}
       </main>

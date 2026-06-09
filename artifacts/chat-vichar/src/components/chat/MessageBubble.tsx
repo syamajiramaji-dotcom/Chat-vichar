@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 export type MessageStatus = "sent" | "delivered" | "seen";
 
 const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
-const DELETE_FOR_EVERYONE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const DELETE_FOR_EVERYONE_WINDOW_MS = 60 * 60 * 1000;
 
 interface MessageBubbleProps {
   message: Message;
@@ -24,18 +24,12 @@ interface MessageBubbleProps {
   isCurrentMatch?: boolean;
 }
 
-/** WhatsApp-style tick(s) SVG */
 function StatusTicks({ status }: { status: MessageStatus }) {
   const seen = status === "seen";
   const double = status === "delivered" || status === "seen";
-  const color = seen ? "#60a5fa" : "currentColor";
-
+  const color = seen ? "#a78bfa" : "rgba(255,255,255,0.5)";
   return (
-    <span
-      className={cn("inline-flex items-center shrink-0", seen ? "text-blue-400" : "text-primary-foreground/50")}
-      aria-label={status}
-      data-testid={`tick-${status}`}
-    >
+    <span className="inline-flex items-center shrink-0" aria-label={status} data-testid={`tick-${status}`}>
       {double ? (
         <svg width="18" height="11" viewBox="0 0 18 11" fill="none">
           <polyline points="1,5.5 4.5,9 10,2" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -50,7 +44,6 @@ function StatusTicks({ status }: { status: MessageStatus }) {
   );
 }
 
-/** Highlights occurrences of `query` inside `text` */
 function HighlightedText({ text, query }: { text: string; query: string }) {
   if (!query.trim()) return <>{text}</>;
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -60,9 +53,7 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
     <>
       {parts.map((part, i) =>
         part.toLowerCase() === lq ? (
-          <mark key={i} className="bg-yellow-300 text-yellow-900 rounded-sm px-[1px] not-italic">
-            {part}
-          </mark>
+          <mark key={i} className="bg-yellow-400/90 text-black rounded-sm px-[1px] not-italic">{part}</mark>
         ) : (
           <span key={i}>{part}</span>
         )
@@ -71,72 +62,47 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
   );
 }
 
-/** Compact context menu that appears on ⋮ click */
 function MessageMenu({
-  isCurrentUser,
-  canDeleteForEveryone,
-  onReply,
-  onDeleteForMe,
-  onDeleteForEveryone,
-  onClose,
+  isCurrentUser, canDeleteForEveryone, onReply, onDeleteForMe, onDeleteForEveryone, onClose,
 }: {
-  isCurrentUser: boolean;
-  canDeleteForEveryone: boolean;
-  onReply: () => void;
-  onDeleteForMe: () => void;
-  onDeleteForEveryone: () => void;
-  onClose: () => void;
+  isCurrentUser: boolean; canDeleteForEveryone: boolean;
+  onReply: () => void; onDeleteForMe: () => void; onDeleteForEveryone: () => void; onClose: () => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose();
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [onClose]);
 
   return (
-    <motion.div
-      ref={menuRef}
-      initial={{ opacity: 0, scale: 0.9, y: 4 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: 4 }}
-      transition={{ duration: 0.12, ease: "easeOut" }}
-      className={cn(
-        "absolute bottom-full mb-1.5 z-50 min-w-[160px]",
-        isCurrentUser ? "right-0" : "left-0"
-      )}
+    <motion.div ref={menuRef}
+      initial={{ opacity: 0, scale: 0.88, y: 4 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.88, y: 4 }} transition={{ duration: 0.12 }}
+      className={cn("absolute bottom-full mb-1.5 z-50 min-w-[165px]", isCurrentUser ? "right-0" : "left-0")}
     >
-      <div className="bg-popover border border-border rounded-xl shadow-xl shadow-black/10 overflow-hidden py-1">
-        <button
-          onClick={() => { onReply(); onClose(); }}
-          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left"
-        >
-          <Reply className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-          Reply
+      <div className="rounded-2xl overflow-hidden py-1"
+        style={{
+          background: "rgba(18,14,40,0.95)",
+          border: "1px solid rgba(124,58,237,.25)",
+          boxShadow: "0 16px 40px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04)",
+          backdropFilter: "blur(20px)"
+        }}>
+        <button onClick={() => { onReply(); onClose(); }}
+          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-foreground hover:bg-white/[.05] transition-colors text-left">
+          <Reply className="w-3.5 h-3.5 text-violet-400 shrink-0" /> Reply
         </button>
-
-        <div className="my-1 border-t border-border/60" />
-
-        <button
-          onClick={() => { onDeleteForMe(); onClose(); }}
-          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors text-left"
-        >
-          <Trash className="w-3.5 h-3.5 shrink-0" />
-          Delete for Me
+        <div className="my-0.5 mx-2 border-t border-white/[.06]" />
+        <button onClick={() => { onDeleteForMe(); onClose(); }}
+          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-rose-400 hover:bg-rose-500/[.08] transition-colors text-left">
+          <Trash className="w-3.5 h-3.5 shrink-0" /> Delete for Me
         </button>
-
         {isCurrentUser && canDeleteForEveryone && (
-          <button
-            onClick={() => { onDeleteForEveryone(); onClose(); }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors text-left"
-          >
-            <Trash2 className="w-3.5 h-3.5 shrink-0" />
-            Delete for Everyone
+          <button onClick={() => { onDeleteForEveryone(); onClose(); }}
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-rose-400 hover:bg-rose-500/[.08] transition-colors text-left">
+            <Trash2 className="w-3.5 h-3.5 shrink-0" /> Delete for Everyone
           </button>
         )}
       </div>
@@ -145,15 +111,8 @@ function MessageMenu({
 }
 
 export function MessageBubble({
-  message,
-  isCurrentUser,
-  status,
-  onReply,
-  onReact,
-  onDelete,
-  currentUserUid = "",
-  searchQuery = "",
-  isCurrentMatch = false,
+  message, isCurrentUser, status, onReply, onReact, onDelete,
+  currentUserUid = "", searchQuery = "", isCurrentMatch = false,
 }: MessageBubbleProps) {
   const [showTime, setShowTime] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -164,72 +123,39 @@ export function MessageBubble({
   const openPicker = useCallback(() => setShowPicker(true), []);
   const closePicker = useCallback(() => setShowPicker(false), []);
 
-  const handleMouseEnter = () => {
-    if (showMenu) return;
-    hoverTimer.current = setTimeout(openPicker, 350);
-  };
-  const handleMouseLeave = () => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    setTimeout(closePicker, 120);
-  };
-  const handlePickerMouseEnter = () => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    setShowPicker(true);
-  };
+  const handleMouseEnter = () => { if (showMenu) return; hoverTimer.current = setTimeout(openPicker, 350); };
+  const handleMouseLeave = () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); setTimeout(closePicker, 120); };
+  const handlePickerMouseEnter = () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); setShowPicker(true); };
   const handlePickerMouseLeave = () => setShowPicker(false);
-
   const handleTouchStart = (e: React.TouchEvent) => {
     e.currentTarget.addEventListener("contextmenu", (ev) => ev.preventDefault(), { once: true });
     longPressTimer.current = setTimeout(() => openPicker(), 500);
   };
-  const handleTouchEnd = () => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  };
-  const handleTouchMove = () => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  };
+  const handleTouchEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
+  const handleTouchMove = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
+  const handleReact = (emoji: string) => { onReact?.(message.id, emoji); setShowPicker(false); };
 
-  const handleReact = (emoji: string) => {
-    onReact?.(message.id, emoji);
-    setShowPicker(false);
-  };
+  const canDeleteForEveryone = isCurrentUser && Date.now() - message.timestamp < DELETE_FOR_EVERYONE_WINDOW_MS;
+  const reactionEntries = Object.entries(message.reactions ?? {}).filter(([, uids]) => uids.length > 0);
 
-  const canDeleteForEveryone =
-    isCurrentUser && Date.now() - message.timestamp < DELETE_FOR_EVERYONE_WINDOW_MS;
-
-  const reactionEntries = Object.entries(message.reactions ?? {}).filter(
-    ([, uids]) => uids.length > 0
-  );
-
-  // ── Deleted message stub ──────────────────────────────────────────────────
+  // ── Deleted stub ──────────────────────────────────────────────────────────
   if (message.deleted) {
     return (
-      <motion.div
-        data-message-id={message.id}
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={cn("flex w-full mb-1", isCurrentUser ? "justify-end" : "justify-start")}
-      >
+      <motion.div data-message-id={message.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+        className={cn("flex w-full mb-1", isCurrentUser ? "justify-end" : "justify-start")}>
         <div className={cn("flex max-w-[75%] gap-2", isCurrentUser ? "flex-row-reverse" : "flex-row")}>
           {!isCurrentUser && (
             <Avatar className="w-8 h-8 shrink-0 mt-auto mb-1">
               <AvatarImage src={message.senderPhotoURL || undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+              <AvatarFallback className="text-xs text-white" style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}>
                 {(message.senderName || "U").charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
           )}
-          <div
-            className={cn(
-              "px-4 py-2.5 rounded-2xl shadow-sm border",
-              isCurrentUser
-                ? "bg-primary/5 border-primary/20 rounded-br-sm"
-                : "bg-muted/50 border-border rounded-bl-sm"
-            )}
-          >
-            <p className="text-[13px] italic text-muted-foreground flex items-center gap-1.5">
-              <span>🚫</span>
-              <span>This message was deleted</span>
+          <div className="px-4 py-2.5 rounded-2xl"
+            style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.07)" }}>
+            <p className="text-[13px] italic text-muted-foreground/70 flex items-center gap-1.5">
+              <span>🚫</span><span>This message was deleted</span>
             </p>
           </div>
         </div>
@@ -237,35 +163,74 @@ export function MessageBubble({
     );
   }
 
+  const actionButtons = (side: "left" | "right") => (
+    <div className={cn(
+      "flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0",
+      side === "left" ? "flex-row" : "flex-row-reverse"
+    )}>
+      {side === "left" && (
+        <Button variant="ghost" size="icon"
+          className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-white/[.06] rounded-xl"
+          onClick={() => onReply(message)}>
+          <Reply className="w-3.5 h-3.5" />
+        </Button>
+      )}
+      <div className="relative">
+        <Button variant="ghost" size="icon"
+          className={cn("w-7 h-7 rounded-xl", showMenu ? "text-violet-400 bg-violet-500/15" : "text-muted-foreground hover:text-foreground hover:bg-white/[.06]")}
+          onClick={(e) => { e.stopPropagation(); setShowMenu((v) => !v); setShowPicker(false); }}>
+          <MoreVertical className="w-3.5 h-3.5" />
+        </Button>
+        <AnimatePresence>
+          {showMenu && (
+            <MessageMenu
+              isCurrentUser={isCurrentUser} canDeleteForEveryone={canDeleteForEveryone}
+              onReply={() => onReply(message)}
+              onDeleteForMe={() => onDelete?.(message.id, false)}
+              onDeleteForEveryone={() => onDelete?.(message.id, true)}
+              onClose={() => setShowMenu(false)}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+      {side === "right" && (
+        <Button variant="ghost" size="icon"
+          className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-white/[.06] rounded-xl"
+          onClick={() => onReply(message)}>
+          <Reply className="w-3.5 h-3.5" />
+        </Button>
+      )}
+    </div>
+  );
+
   return (
-    <motion.div
-      data-message-id={message.id}
-      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      className={cn("flex w-full group mb-1", isCurrentUser ? "justify-end" : "justify-start")}
+    <motion.div data-message-id={message.id}
+      initial={{ opacity: 0, y: 10, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+      className={cn("flex w-full group mb-1.5", isCurrentUser ? "justify-end" : "justify-start")}
     >
       <div className={cn("flex max-w-[75%] gap-2", isCurrentUser ? "flex-row-reverse" : "flex-row")}>
         {!isCurrentUser && (
-          <Avatar className="w-8 h-8 shrink-0 mt-auto mb-1">
+          <Avatar className="w-8 h-8 shrink-0 mt-auto mb-1 ring-1 ring-violet-500/20">
             <AvatarImage src={message.senderPhotoURL || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+            <AvatarFallback className="text-xs text-white" style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}>
               {(message.senderName || "U").charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
         )}
 
         <div className="flex flex-col gap-1">
-          {/* Reply preview */}
           {message.replyTo && (
             <div className={cn(
-              "text-xs p-2 rounded-lg opacity-80 mb-1 max-w-full",
-              isCurrentUser ? "bg-primary/20 text-primary-foreground/90 ml-auto" : "bg-muted text-muted-foreground mr-auto"
+              "text-xs p-2.5 rounded-xl opacity-80 mb-1 max-w-full",
+              isCurrentUser
+                ? "bg-violet-500/15 border border-violet-500/20 ml-auto"
+                : "bg-white/[.05] border border-white/[.08] mr-auto"
             )}>
-              <div className="font-semibold text-[10px] mb-0.5">{message.replyTo.senderName}</div>
+              <div className="font-semibold text-[10px] mb-0.5 text-violet-400">{message.replyTo.senderName}</div>
               {message.replyTo.text ? (
-                <div className="truncate">{message.replyTo.text}</div>
+                <div className="truncate text-foreground/70">{message.replyTo.text}</div>
               ) : message.replyTo.mediaType ? (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 text-muted-foreground">
                   {message.replyTo.mediaType === "image" && <ImageIcon className="w-3 h-3" />}
                   {message.replyTo.mediaType === "video" && <FileVideo className="w-3 h-3" />}
                   {message.replyTo.mediaType === "audio" && <Mic className="w-3 h-3" />}
@@ -275,82 +240,37 @@ export function MessageBubble({
             </div>
           )}
 
-          <div className="flex items-end gap-1.5 group-hover:gap-2 transition-all">
-            {/* Action buttons — left side for own messages */}
-            {isCurrentUser && (
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-6 h-6 text-muted-foreground hover:text-foreground"
-                  onClick={() => onReply(message)}
-                >
-                  <Reply className="w-3 h-3" />
-                </Button>
-                <div className="relative">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "w-6 h-6 text-muted-foreground hover:text-foreground",
-                      showMenu && "text-foreground bg-muted"
-                    )}
-                    onClick={(e) => { e.stopPropagation(); setShowMenu((v) => !v); setShowPicker(false); }}
-                  >
-                    <MoreVertical className="w-3 h-3" />
-                  </Button>
-                  <AnimatePresence>
-                    {showMenu && (
-                      <MessageMenu
-                        isCurrentUser={isCurrentUser}
-                        canDeleteForEveryone={canDeleteForEveryone}
-                        onReply={() => onReply(message)}
-                        onDeleteForMe={() => onDelete?.(message.id, false)}
-                        onDeleteForEveryone={() => onDelete?.(message.id, true)}
-                        onClose={() => setShowMenu(false)}
-                      />
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-            )}
+          <div className="flex items-end gap-1.5">
+            {isCurrentUser && actionButtons("left")}
 
-            {/* Bubble wrapper — hover/long-press zone for emoji picker */}
-            <div
-              className="relative flex flex-col"
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
-              onTouchMove={handleTouchMove}
+            {/* Bubble */}
+            <div className="relative flex flex-col"
+              onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
+              onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}
             >
-              {/* ── Emoji Picker ── */}
+              {/* Emoji picker */}
               <AnimatePresence>
                 {showPicker && (
                   <motion.div
-                    initial={{ opacity: 0, y: 6, scale: 0.85 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 6, scale: 0.85 }}
-                    transition={{ duration: 0.14, ease: "easeOut" }}
-                    className={cn(
-                      "absolute bottom-full mb-2 z-50",
-                      isCurrentUser ? "right-0" : "left-0"
-                    )}
-                    onMouseEnter={handlePickerMouseEnter}
-                    onMouseLeave={handlePickerMouseLeave}
+                    initial={{ opacity: 0, y: 6, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.85 }} transition={{ duration: 0.14 }}
+                    className={cn("absolute bottom-full mb-2 z-50", isCurrentUser ? "right-0" : "left-0")}
+                    onMouseEnter={handlePickerMouseEnter} onMouseLeave={handlePickerMouseLeave}
                   >
-                    <div className="flex gap-0.5 bg-card border border-border rounded-full px-2.5 py-1.5 shadow-xl shadow-black/10">
+                    <div className="flex gap-0.5 px-2.5 py-1.5 rounded-full"
+                      style={{
+                        background: "rgba(18,14,40,0.95)", border: "1px solid rgba(124,58,237,.3)",
+                        boxShadow: "0 8px 32px rgba(0,0,0,.5), 0 0 16px rgba(124,58,237,.15)",
+                        backdropFilter: "blur(20px)"
+                      }}>
                       {EMOJIS.map((emoji) => {
                         const alreadyReacted = (message.reactions?.[emoji] ?? []).includes(currentUserUid);
                         return (
-                          <button
-                            key={emoji}
-                            onClick={() => handleReact(emoji)}
+                          <button key={emoji} onClick={() => handleReact(emoji)}
                             className={cn(
                               "w-9 h-9 text-xl flex items-center justify-center rounded-full transition-all duration-150 hover:scale-125 active:scale-110",
-                              alreadyReacted ? "bg-primary/15" : "hover:bg-muted"
-                            )}
-                          >
+                              alreadyReacted ? "bg-violet-500/20" : "hover:bg-white/[.08]"
+                            )}>
                             {emoji}
                           </button>
                         );
@@ -360,25 +280,26 @@ export function MessageBubble({
                 )}
               </AnimatePresence>
 
-              {/* ── Bubble ── */}
+              {/* The bubble itself */}
               <div
                 className={cn(
-                  "px-4 py-2.5 rounded-2xl relative shadow-sm cursor-pointer transition-shadow duration-200",
+                  "px-4 py-2.5 rounded-2xl relative cursor-pointer transition-all duration-200",
                   isCurrentUser
-                    ? "bg-primary text-primary-foreground rounded-br-sm"
-                    : "bg-card border border-border text-card-foreground rounded-bl-sm",
-                  isCurrentMatch && "ring-2 ring-yellow-400 ring-offset-1 shadow-yellow-200/50 shadow-lg"
+                    ? "bubble-sent text-white rounded-br-sm"
+                    : "bubble-received text-foreground rounded-bl-sm",
+                  isCurrentMatch && "ring-2 ring-yellow-400/70 ring-offset-1 ring-offset-transparent"
                 )}
                 onClick={() => setShowTime(!showTime)}
               >
                 {/* Media */}
                 {message.media && (
-                  <div className={cn("rounded-lg overflow-hidden", message.text ? "mb-2" : "mb-0")}>
+                  <div className={cn("rounded-xl overflow-hidden", message.text ? "mb-2" : "mb-0")}>
                     {message.media.mediaType === "image" && (
-                      <img src={message.media.url} alt="Attachment" className="max-h-[250px] w-auto object-cover rounded-md" loading="lazy" />
+                      <img src={message.media.url} alt="Attachment"
+                        className="max-h-[250px] w-auto object-cover rounded-lg" loading="lazy" />
                     )}
                     {message.media.mediaType === "video" && (
-                      <video src={message.media.url} controls className="max-h-[250px] w-auto rounded-md" />
+                      <video src={message.media.url} controls className="max-h-[250px] w-auto rounded-lg" />
                     )}
                     {message.media.mediaType === "audio" && (
                       <audio src={message.media.url} controls className="max-w-[220px] h-10" />
@@ -393,44 +314,38 @@ export function MessageBubble({
                   </p>
                 )}
 
-                {/* Timestamp + ticks */}
+                {/* Time + ticks */}
                 <div className={cn(
                   "flex items-center justify-end gap-1 mt-1",
-                  isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                  isCurrentUser ? "text-white/50" : "text-muted-foreground/60"
                 )}>
                   <span className="text-[10px]">{format(message.timestamp, "HH:mm")}</span>
                   {isCurrentUser && <StatusTicks status={status} />}
                 </div>
               </div>
 
-              {/* ── Reaction pills ── */}
+              {/* Reaction pills */}
               <AnimatePresence>
                 {reactionEntries.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={cn("flex flex-wrap gap-1 mt-1.5", isCurrentUser ? "justify-end" : "justify-start")}
-                  >
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                    className={cn("flex flex-wrap gap-1 mt-1.5", isCurrentUser ? "justify-end" : "justify-start")}>
                     {reactionEntries.map(([emoji, uids]) => {
                       const reacted = uids.includes(currentUserUid);
                       return (
-                        <motion.button
-                          key={emoji}
-                          layout
-                          initial={{ scale: 0.4, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          exit={{ scale: 0.4, opacity: 0 }}
-                          transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                        <motion.button key={emoji} layout
+                          initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.4, opacity: 0 }} transition={{ type: "spring", stiffness: 400, damping: 20 }}
                           onClick={() => onReact?.(message.id, emoji)}
-                          className={cn(
-                            "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors select-none",
-                            reacted
-                              ? "bg-primary/15 border-primary/40 text-primary font-medium"
-                              : "bg-card border-border text-foreground hover:bg-muted"
-                          )}
-                        >
-                          <span>{emoji}</span>
-                          <span>{uids.length}</span>
+                          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all select-none"
+                          style={reacted ? {
+                            background: "rgba(124,58,237,.2)", border: "1px solid rgba(124,58,237,.4)",
+                            color: "#c084fc", fontWeight: 600,
+                            boxShadow: "0 0 8px rgba(124,58,237,.25)"
+                          } : {
+                            background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.09)",
+                            color: "hsl(var(--foreground))"
+                          }}>
+                          <span>{emoji}</span><span>{uids.length}</span>
                         </motion.button>
                       );
                     })}
@@ -439,44 +354,7 @@ export function MessageBubble({
               </AnimatePresence>
             </div>
 
-            {/* Action buttons — right side for received messages */}
-            {!isCurrentUser && (
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                <div className="relative">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "w-6 h-6 text-muted-foreground hover:text-foreground",
-                      showMenu && "text-foreground bg-muted"
-                    )}
-                    onClick={(e) => { e.stopPropagation(); setShowMenu((v) => !v); setShowPicker(false); }}
-                  >
-                    <MoreVertical className="w-3 h-3" />
-                  </Button>
-                  <AnimatePresence>
-                    {showMenu && (
-                      <MessageMenu
-                        isCurrentUser={isCurrentUser}
-                        canDeleteForEveryone={canDeleteForEveryone}
-                        onReply={() => onReply(message)}
-                        onDeleteForMe={() => onDelete?.(message.id, false)}
-                        onDeleteForEveryone={() => onDelete?.(message.id, true)}
-                        onClose={() => setShowMenu(false)}
-                      />
-                    )}
-                  </AnimatePresence>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-6 h-6 text-muted-foreground hover:text-foreground"
-                  onClick={() => onReply(message)}
-                >
-                  <Reply className="w-3 h-3" />
-                </Button>
-              </div>
-            )}
+            {!isCurrentUser && actionButtons("right")}
           </div>
         </div>
       </div>
