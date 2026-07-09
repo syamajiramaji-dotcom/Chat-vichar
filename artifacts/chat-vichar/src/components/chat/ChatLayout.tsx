@@ -1,13 +1,16 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { NavSidebar, type NavSection } from "@/components/nav/NavSidebar";
-import { PagePanel } from "@/components/nav/PagePanel";
 import { Sidebar } from "./Sidebar";
 import { ChatWindow } from "./ChatWindow";
 import { ChatUser } from "@/types/chat";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { markAsRead } from "@/lib/unread";
 import { MessageSquare } from "lucide-react";
+
+const PagePanel = lazy(() =>
+  import("@/components/nav/PagePanel").then((m) => ({ default: m.PagePanel }))
+);
 
 const CHAT_SECTIONS: NavSection[] = ["chats"];
 
@@ -98,7 +101,13 @@ export function ChatLayout() {
               </div>
             </div>
             <div className="flex-1 overflow-hidden">
-              <PagePanel section={activeSection} />
+              <Suspense fallback={
+                <div className="flex items-center justify-center h-full">
+                  <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              }>
+                <PagePanel section={activeSection} />
+              </Suspense>
             </div>
           </div>
         )}

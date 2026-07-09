@@ -1,20 +1,32 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import HomePage from "@/pages/home";
-import NotFound from "@/pages/not-found";
+
+const HomePage = lazy(() => import("@/pages/home"));
+const NotFound = lazy(() => import("@/pages/not-found"));
 
 const queryClient = new QueryClient();
 
+function PageSpinner() {
+  return (
+    <div className="h-[100dvh] w-full flex items-center justify-center bg-background">
+      <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={HomePage} />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<PageSpinner />}>
+      <Switch>
+        <Route path="/" component={HomePage} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
