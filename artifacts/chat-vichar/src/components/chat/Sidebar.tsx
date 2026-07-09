@@ -6,9 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, LogOut, MessageSquare, Sun, Moon } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
+import { Search, Menu, MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -17,12 +15,11 @@ interface SidebarProps {
   selectedUser: ChatUser | null;
   onSelectUser: (user: ChatUser) => void;
   unreadCounts: Record<string, number>;
+  onOpenNav: () => void;
 }
 
-export function Sidebar({ currentUser, selectedUser, onSelectUser, unreadCounts }: SidebarProps) {
+export function Sidebar({ currentUser, selectedUser, onSelectUser, unreadCounts, onOpenNav }: SidebarProps) {
   const { users, loading } = useUsers(currentUser.uid);
-  const { logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
 
   const sortedUsers = useMemo(() => {
@@ -45,73 +42,22 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser, unreadCounts 
     );
   }, [sortedUsers, searchQuery]);
 
-  const totalUnread = useMemo(
-    () => Object.values(unreadCounts).reduce((sum, n) => sum + n, 0),
-    [unreadCounts]
-  );
-
-  const myInitial = (currentUser.displayName || currentUser.email || "U").charAt(0).toUpperCase();
-  const myName = currentUser.displayName || currentUser.email?.split("@")[0] || "Me";
-
   return (
-    <div className="w-full md:w-80 lg:w-96 flex flex-col h-full flex-shrink-0"
-      style={{
-        background: "hsl(var(--sidebar))",
-        borderRight: "1px solid var(--t-sidebar-panel-border)"
-      }}>
+    <div className="flex flex-col h-full w-full"
+      style={{ background: "hsl(var(--sidebar))", borderRight: "1px solid var(--t-sidebar-panel-border)" }}>
 
-      {/* ── Gradient header ── */}
-      <div className="gradient-sidebar-header shrink-0 p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-1.5">
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center"
-              style={{ background: "var(--t-gradient-primary)" }}>
-              <MessageSquare className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="font-bold text-sm gradient-text tracking-wide">Chat-vichar</span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            {/* Theme toggle */}
-            <Button variant="ghost" size="icon" onClick={toggleTheme}
-              className="text-muted-foreground hover:text-foreground hover:bg-white/[.06] h-8 w-8 rounded-xl"
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-            {/* Logout */}
-            <Button variant="ghost" size="icon" onClick={logout}
-              className="text-muted-foreground hover:text-foreground hover:bg-white/[.06] h-8 w-8 rounded-xl"
-              title="Log out">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Current user row */}
-        <div className="flex items-center gap-3 p-3 rounded-2xl"
-          style={{ background: "var(--t-user-chip-bg)", border: "1px solid var(--t-user-chip-border)" }}>
-          <div className="relative shrink-0">
-            <Avatar className="h-11 w-11">
-              <AvatarImage src={currentUser.photoURL || undefined} />
-              <AvatarFallback className="font-bold text-sm text-white"
-                style={{ background: "var(--t-gradient-primary)" }}>
-                {myInitial}
-              </AvatarFallback>
-            </Avatar>
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-transparent neon-online" />
-            {totalUnread > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] text-[10px] font-bold rounded-full flex items-center justify-center px-1 text-white"
-                style={{ background: "var(--t-badge-bg)", boxShadow: "0 0 8px var(--t-badge-shadow)" }}>
-                {totalUnread > 99 ? "99+" : totalUnread}
-              </span>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm text-foreground truncate">{myName}</p>
-            <p className="text-xs text-green-500 flex items-center gap-1.5 mt-0.5">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500" />
-              Online
-            </p>
+      {/* ── Header ── */}
+      <div className="shrink-0 gradient-sidebar-header">
+        <div className="flex items-center gap-3 px-4 h-14">
+          {/* Mobile: hamburger to open NavSidebar */}
+          <Button variant="ghost" size="icon"
+            className="md:hidden h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground shrink-0"
+            onClick={onOpenNav}>
+            <Menu className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <MessageSquare className="w-4 h-4 shrink-0" style={{ color: "var(--t-icon-color)" }} />
+            <h2 className="font-bold text-sm gradient-text tracking-wide">Chats</h2>
           </div>
         </div>
       </div>
@@ -135,7 +81,7 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser, unreadCounts 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-0.5">
           {loading ? (
-            Array.from({ length: 4 }).map((_, i) => (
+            Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 p-3 rounded-2xl">
                 <div className="h-12 w-12 rounded-full bg-muted animate-pulse shrink-0" />
                 <div className="flex-1 space-y-2">
@@ -175,7 +121,6 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser, unreadCounts 
                     boxShadow: "0 0 20px var(--t-contact-selected-shadow) inset"
                   } : undefined}
                 >
-                  {/* Left accent bar for selected */}
                   {isSelected && (
                     <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-7 rounded-full"
                       style={{ background: "var(--t-contact-bar)" }} />
