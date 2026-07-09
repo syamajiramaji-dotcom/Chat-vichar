@@ -15,11 +15,11 @@ paths = [ "/" ]
 localPort = 23747
 
 [services.development]
-run = "pnpm --filter @workspace/chat-vichar run dev"
+run = "pnpm --filter chat-vichar run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/chat-vichar", "run", "build" ]
-publicDir = "artifacts/chat-vichar/dist/public"
+build = [ "pnpm", "--filter", "chat-vichar", "run", "build" ]
+publicDir = "artifacts/chat-vichar/dist"
 serve = "static"
 
 [[services.production.rewrites]]
