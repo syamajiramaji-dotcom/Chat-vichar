@@ -108,23 +108,23 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply, onTypingSt
   return (
     <div className="relative flex flex-col gap-2 p-3"
       style={{
-        background: "hsl(228 28% 8%)",
-        borderTop: "1px solid rgba(124,58,237,.12)"
+        background: "var(--t-input-bar-bg)",
+        borderTop: "1px solid var(--t-input-bar-border)"
       }}>
       {/* Upload progress bar */}
       {isUploading && (
         <div className="absolute top-0 left-0 w-full h-0.5 overflow-hidden">
           <div className="h-full transition-all duration-300 rounded-full"
-            style={{ width: `${uploadProgress}%`, background: "linear-gradient(90deg,#7c3aed,#4f46e5,#818cf8)" }} />
+            style={{ width: `${uploadProgress}%`, background: "var(--t-upload-bar)" }} />
         </div>
       )}
 
       {/* Reply preview */}
       {replyTo && (
         <div className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm"
-          style={{ background: "rgba(124,58,237,.1)", border: "1px solid rgba(124,58,237,.2)" }}>
+          style={{ background: "var(--t-reply-bg)", border: "1px solid var(--t-reply-border)" }}>
           <div className="flex flex-col min-w-0">
-            <span className="font-medium text-xs mb-0.5" style={{ color: "#a78bfa" }}>
+            <span className="font-medium text-xs mb-0.5" style={{ color: "var(--t-icon-color)" }}>
               Replying to {replyTo.senderName}
             </span>
             <span className="text-muted-foreground/80 truncate text-xs">
@@ -142,7 +142,7 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply, onTypingSt
 
         {!isRecording && (
           <Button variant="ghost" size="icon"
-            className="text-muted-foreground hover:text-violet-400 hover:bg-violet-500/10 h-11 w-11 rounded-2xl shrink-0 pb-0 transition-colors"
+            className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-11 w-11 rounded-2xl shrink-0 transition-colors"
             onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
             <ImageIcon className="w-5 h-5" />
           </Button>
@@ -150,15 +150,15 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply, onTypingSt
 
         {isRecording ? (
           <div className="flex-1 flex items-center justify-between rounded-2xl px-4 h-[52px]"
-            style={{ background: "rgba(239,68,68,.08)", border: "1px solid rgba(239,68,68,.2)" }}>
+            style={{ background: "var(--t-recording-bg)", border: "1px solid var(--t-recording-border)" }}>
             <div className="flex items-center gap-3">
               <div className="w-2.5 h-2.5 bg-rose-500 rounded-full neon-pulse" />
-              <span className="font-mono font-medium text-rose-400">{formatDuration(duration)}</span>
+              <span className="font-mono font-medium text-rose-500">{formatDuration(duration)}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={cancelRecording} className="text-muted-foreground hover:text-rose-400 text-xs">Cancel</Button>
+              <Button variant="ghost" size="sm" onClick={cancelRecording} className="text-muted-foreground hover:text-destructive text-xs">Cancel</Button>
               <Button size="icon" onClick={stopRecording}
-                className="h-8 w-8 rounded-xl text-white"
+                className="h-8 w-8 rounded-xl text-white border-0"
                 style={{ background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}>
                 <Square className="w-3 h-3 fill-current" />
               </Button>
@@ -167,13 +167,13 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply, onTypingSt
         ) : (
           <div className={cn(
             "flex-1 relative rounded-2xl overflow-hidden transition-all duration-200",
-            "focus-within:ring-2 focus-within:ring-violet-500/40"
+            "focus-within:ring-2 focus-within:ring-primary/40"
           )}
-            style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)" }}>
+            style={{ background: "var(--t-input-bg)", border: "1px solid var(--t-input-border)" }}>
             <Textarea
               value={text} onChange={handleTextChange} onKeyDown={handleKeyDown}
               placeholder="Type a message…"
-              className="min-h-[52px] max-h-[150px] resize-none border-0 focus-visible:ring-0 bg-transparent py-3.5 px-4 text-foreground placeholder:text-muted-foreground/40"
+              className="min-h-[52px] max-h-[150px] resize-none border-0 focus-visible:ring-0 bg-transparent py-3.5 px-4 text-foreground placeholder:text-muted-foreground/50"
               rows={1}
             />
           </div>
@@ -183,14 +183,14 @@ export function MessageInput({ onSendMessage, replyTo, onCancelReply, onTypingSt
           <div className="shrink-0">
             {text.trim() ? (
               <Button onClick={handleSend} disabled={isUploading} size="icon"
-                className="h-11 w-11 rounded-2xl text-white transition-all active:scale-95 btn-glow"
-                style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}>
+                className="h-11 w-11 rounded-2xl text-white transition-all active:scale-95 btn-glow border-0"
+                style={{ background: "var(--t-send-btn)" }}>
                 {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 ml-0.5" />}
               </Button>
             ) : (
               <Button onClick={startRecording} disabled={isUploading} size="icon"
-                className="h-11 w-11 rounded-2xl transition-all active:scale-95 text-muted-foreground hover:text-violet-400 hover:bg-violet-500/10"
-                style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)" }}>
+                className="h-11 w-11 rounded-2xl transition-all active:scale-95 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                style={{ background: "var(--t-voice-btn-bg)", border: "1px solid var(--t-voice-btn-border)" }}>
                 <Mic className="w-5 h-5" />
               </Button>
             )}

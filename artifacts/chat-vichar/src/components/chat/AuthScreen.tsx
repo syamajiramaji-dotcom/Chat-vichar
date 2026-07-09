@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SiGoogle } from "react-icons/si";
-import { MessageSquare, Loader2 } from "lucide-react";
+import { MessageSquare, Loader2, Moon, Sun } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
 export function AuthScreen() {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -56,11 +58,21 @@ export function AuthScreen() {
     <div className="min-h-[100dvh] flex flex-col items-center justify-center p-4 relative overflow-hidden bg-background">
       {/* Animated gradient orbs */}
       <div className="orb-animate absolute -top-[15%] -left-[10%] w-[50%] h-[50%] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(124,58,237,0.22) 0%, transparent 70%)" }} />
+        style={{ background: "var(--t-orb-1)" }} />
       <div className="orb-animate-reverse absolute -bottom-[15%] -right-[10%] w-[55%] h-[55%] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(79,70,229,0.18) 0%, transparent 70%)" }} />
+        style={{ background: "var(--t-orb-2)" }} />
       <div className="orb-animate absolute top-[40%] right-[5%] w-[30%] h-[30%] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(192,132,252,0.12) 0%, transparent 70%)" }} />
+        style={{ background: "var(--t-orb-3)" }} />
+
+      {/* Theme toggle — top right */}
+      <button
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 z-20 h-9 w-9 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        style={{ background: "var(--t-input-bg)", border: "1px solid var(--t-input-border)" }}
+        aria-label="Toggle theme"
+      >
+        {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      </button>
 
       <motion.div
         initial={{ opacity: 0, y: 24 }}
@@ -71,33 +83,34 @@ export function AuthScreen() {
         {/* Logo + brand */}
         <div className="flex flex-col items-center mb-8 text-center">
           <div className="relative mb-5">
-            <div className="w-18 h-18 w-[72px] h-[72px] rounded-2xl flex items-center justify-center btn-glow"
-              style={{ background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)" }}>
+            <div className="w-[72px] h-[72px] rounded-2xl flex items-center justify-center btn-glow"
+              style={{ background: "var(--t-gradient-primary)" }}>
               <MessageSquare className="w-9 h-9 text-white" />
             </div>
             <div className="absolute inset-0 rounded-2xl blur-xl opacity-40"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }} />
+              style={{ background: "var(--t-gradient-primary)" }} />
           </div>
           <h1 className="text-3xl font-bold tracking-tight gradient-text">Chat-vichar</h1>
           <p className="text-muted-foreground mt-2 text-sm">An intimate, personal messaging space.</p>
         </div>
 
         {/* Auth card — glassmorphism */}
-        <div className="glass rounded-2xl overflow-hidden shadow-2xl"
-          style={{ boxShadow: "0 24px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06)" }}>
+        <div className="rounded-2xl overflow-hidden"
+          style={{
+            background: "var(--t-auth-card-bg)",
+            border: "1px solid var(--t-auth-card-border)",
+            boxShadow: "var(--t-auth-card-shadow)",
+            backdropFilter: "blur(20px)"
+          }}>
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 p-1.5 rounded-none bg-transparent border-b border-white/[.06]">
-              <TabsTrigger
-                value="signin"
-                className="rounded-xl text-sm font-medium text-muted-foreground data-[state=active]:text-white data-[state=active]:shadow-none"
-                style={{ ["--tw-data-active-bg" as string]: "rgba(124,58,237,.25)" }}
-              >
+            <TabsList className="grid w-full grid-cols-2 p-1.5 rounded-none bg-transparent"
+              style={{ borderBottom: "1px solid var(--t-divider)" }}>
+              <TabsTrigger value="signin"
+                className="rounded-xl text-sm font-medium text-muted-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none">
                 Sign In
               </TabsTrigger>
-              <TabsTrigger
-                value="signup"
-                className="rounded-xl text-sm font-medium text-muted-foreground data-[state=active]:text-white data-[state=active]:shadow-none"
-              >
+              <TabsTrigger value="signup"
+                className="rounded-xl text-sm font-medium text-muted-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none">
                 Sign Up
               </TabsTrigger>
             </TabsList>
@@ -111,24 +124,19 @@ export function AuthScreen() {
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="signin-email" className="text-xs text-muted-foreground uppercase tracking-wide">Email</Label>
-                  <Input
-                    id="signin-email" type="email" placeholder="you@example.com"
+                  <Input id="signin-email" type="email" placeholder="you@example.com"
                     value={signInEmail} onChange={(e) => setSignInEmail(e.target.value)}
-                    required className="bg-white/[.04] border-white/[.08] focus:border-primary/60 h-11 text-foreground placeholder:text-muted-foreground/50"
-                  />
+                    required className="h-11 bg-background/50" />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="signin-password" className="text-xs text-muted-foreground uppercase tracking-wide">Password</Label>
-                  <Input
-                    id="signin-password" type="password"
+                  <Input id="signin-password" type="password"
                     value={signInPassword} onChange={(e) => setSignInPassword(e.target.value)}
-                    required className="bg-white/[.04] border-white/[.08] focus:border-primary/60 h-11"
-                  />
+                    required className="h-11 bg-background/50" />
                 </div>
-                <Button type="submit" className="w-full h-11 font-semibold btn-glow transition-all active:scale-[.98]"
-                  style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
-                  disabled={isLoading}
-                >
+                <Button type="submit" className="w-full h-11 font-semibold btn-glow transition-all active:scale-[.98] text-white border-0"
+                  style={{ background: "var(--t-gradient-primary)" }}
+                  disabled={isLoading}>
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   {isLoading ? "Signing in…" : "Sign In"}
                 </Button>
@@ -144,33 +152,25 @@ export function AuthScreen() {
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="signup-name" className="text-xs text-muted-foreground uppercase tracking-wide">Full Name</Label>
-                  <Input
-                    id="signup-name" placeholder="Jane Doe"
+                  <Input id="signup-name" placeholder="Jane Doe"
                     value={signUpName} onChange={(e) => setSignUpName(e.target.value)}
-                    required className="bg-white/[.04] border-white/[.08] focus:border-primary/60 h-11"
-                  />
+                    required className="h-11 bg-background/50" />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="signup-email" className="text-xs text-muted-foreground uppercase tracking-wide">Email</Label>
-                  <Input
-                    id="signup-email" type="email" placeholder="you@example.com"
+                  <Input id="signup-email" type="email" placeholder="you@example.com"
                     value={signUpEmail} onChange={(e) => setSignUpEmail(e.target.value)}
-                    required className="bg-white/[.04] border-white/[.08] focus:border-primary/60 h-11"
-                  />
+                    required className="h-11 bg-background/50" />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="signup-password" className="text-xs text-muted-foreground uppercase tracking-wide">Password</Label>
-                  <Input
-                    id="signup-password" type="password"
+                  <Input id="signup-password" type="password"
                     value={signUpPassword} onChange={(e) => setSignUpPassword(e.target.value)}
-                    required minLength={6}
-                    className="bg-white/[.04] border-white/[.08] focus:border-primary/60 h-11"
-                  />
+                    required minLength={6} className="h-11 bg-background/50" />
                 </div>
-                <Button type="submit" className="w-full h-11 font-semibold btn-glow transition-all active:scale-[.98]"
-                  style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
-                  disabled={isLoading}
-                >
+                <Button type="submit" className="w-full h-11 font-semibold btn-glow transition-all active:scale-[.98] text-white border-0"
+                  style={{ background: "var(--t-gradient-primary)" }}
+                  disabled={isLoading}>
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   {isLoading ? "Creating account…" : "Sign Up"}
                 </Button>
@@ -180,15 +180,13 @@ export function AuthScreen() {
             {/* ── Google ── */}
             <div className="px-6 pb-6">
               <div className="relative my-4 flex items-center">
-                <div className="flex-1 border-t border-white/[.07]" />
+                <div className="flex-1 border-t" style={{ borderColor: "var(--t-divider)" }} />
                 <span className="mx-3 text-[11px] uppercase tracking-widest text-muted-foreground/60">or</span>
-                <div className="flex-1 border-t border-white/[.07]" />
+                <div className="flex-1 border-t" style={{ borderColor: "var(--t-divider)" }} />
               </div>
-              <Button
-                variant="outline" type="button"
-                className="w-full h-11 bg-white/[.03] border-white/[.08] hover:bg-white/[.07] text-foreground transition-all"
-                onClick={handleGoogle}
-              >
+              <Button variant="outline" type="button"
+                className="w-full h-11 hover:bg-background/80 text-foreground transition-all"
+                onClick={handleGoogle}>
                 <SiGoogle className="mr-2.5 h-4 w-4" />
                 Continue with Google
               </Button>

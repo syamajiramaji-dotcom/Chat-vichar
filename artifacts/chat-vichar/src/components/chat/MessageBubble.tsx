@@ -27,7 +27,7 @@ interface MessageBubbleProps {
 function StatusTicks({ status }: { status: MessageStatus }) {
   const seen = status === "seen";
   const double = status === "delivered" || status === "seen";
-  const color = seen ? "#a78bfa" : "rgba(255,255,255,0.5)";
+  const color = seen ? "var(--t-icon-color)" : "rgba(128,128,128,0.6)";
   return (
     <span className="inline-flex items-center shrink-0" aria-label={status} data-testid={`tick-${status}`}>
       {double ? (
@@ -85,23 +85,23 @@ function MessageMenu({
     >
       <div className="rounded-2xl overflow-hidden py-1"
         style={{
-          background: "rgba(18,14,40,0.95)",
-          border: "1px solid rgba(124,58,237,.25)",
-          boxShadow: "0 16px 40px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04)",
+          background: "var(--t-menu-bg)",
+          border: "1px solid var(--t-menu-border)",
+          boxShadow: "0 16px 40px rgba(0,0,0,.25)",
           backdropFilter: "blur(20px)"
         }}>
         <button onClick={() => { onReply(); onClose(); }}
-          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-foreground hover:bg-white/[.05] transition-colors text-left">
-          <Reply className="w-3.5 h-3.5 text-violet-400 shrink-0" /> Reply
+          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-left">
+          <Reply className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--t-icon-color)" }} /> Reply
         </button>
-        <div className="my-0.5 mx-2 border-t border-white/[.06]" />
+        <div className="my-0.5 mx-2 border-t border-border/40" />
         <button onClick={() => { onDeleteForMe(); onClose(); }}
-          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-rose-400 hover:bg-rose-500/[.08] transition-colors text-left">
+          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors text-left">
           <Trash className="w-3.5 h-3.5 shrink-0" /> Delete for Me
         </button>
         {isCurrentUser && canDeleteForEveryone && (
           <button onClick={() => { onDeleteForEveryone(); onClose(); }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-rose-400 hover:bg-rose-500/[.08] transition-colors text-left">
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors text-left">
             <Trash2 className="w-3.5 h-3.5 shrink-0" /> Delete for Everyone
           </button>
         )}
@@ -114,7 +114,6 @@ export function MessageBubble({
   message, isCurrentUser, status, onReply, onReact, onDelete,
   currentUserUid = "", searchQuery = "", isCurrentMatch = false,
 }: MessageBubbleProps) {
-  const [showTime, setShowTime] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -147,13 +146,14 @@ export function MessageBubble({
           {!isCurrentUser && (
             <Avatar className="w-8 h-8 shrink-0 mt-auto mb-1">
               <AvatarImage src={message.senderPhotoURL || undefined} />
-              <AvatarFallback className="text-xs text-white" style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}>
+              <AvatarFallback className="text-xs text-white"
+                style={{ background: "var(--t-gradient-primary)" }}>
                 {(message.senderName || "U").charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
           )}
           <div className="px-4 py-2.5 rounded-2xl"
-            style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.07)" }}>
+            style={{ background: "var(--t-deleted-bg)", border: "1px solid var(--t-deleted-border)" }}>
             <p className="text-[13px] italic text-muted-foreground/70 flex items-center gap-1.5">
               <span>🚫</span><span>This message was deleted</span>
             </p>
@@ -170,14 +170,14 @@ export function MessageBubble({
     )}>
       {side === "left" && (
         <Button variant="ghost" size="icon"
-          className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-white/[.06] rounded-xl"
+          className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl"
           onClick={() => onReply(message)}>
           <Reply className="w-3.5 h-3.5" />
         </Button>
       )}
       <div className="relative">
         <Button variant="ghost" size="icon"
-          className={cn("w-7 h-7 rounded-xl", showMenu ? "text-violet-400 bg-violet-500/15" : "text-muted-foreground hover:text-foreground hover:bg-white/[.06]")}
+          className={cn("w-7 h-7 rounded-xl", showMenu ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted")}
           onClick={(e) => { e.stopPropagation(); setShowMenu((v) => !v); setShowPicker(false); }}>
           <MoreVertical className="w-3.5 h-3.5" />
         </Button>
@@ -195,7 +195,7 @@ export function MessageBubble({
       </div>
       {side === "right" && (
         <Button variant="ghost" size="icon"
-          className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-white/[.06] rounded-xl"
+          className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl"
           onClick={() => onReply(message)}>
           <Reply className="w-3.5 h-3.5" />
         </Button>
@@ -210,9 +210,10 @@ export function MessageBubble({
     >
       <div className={cn("flex max-w-[75%] gap-2", isCurrentUser ? "flex-row-reverse" : "flex-row")}>
         {!isCurrentUser && (
-          <Avatar className="w-8 h-8 shrink-0 mt-auto mb-1 ring-1 ring-violet-500/20">
+          <Avatar className="w-8 h-8 shrink-0 mt-auto mb-1">
             <AvatarImage src={message.senderPhotoURL || undefined} />
-            <AvatarFallback className="text-xs text-white" style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}>
+            <AvatarFallback className="text-xs text-white"
+              style={{ background: "var(--t-gradient-primary)" }}>
               {(message.senderName || "U").charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -222,11 +223,12 @@ export function MessageBubble({
           {message.replyTo && (
             <div className={cn(
               "text-xs p-2.5 rounded-xl opacity-80 mb-1 max-w-full",
-              isCurrentUser
-                ? "bg-violet-500/15 border border-violet-500/20 ml-auto"
-                : "bg-white/[.05] border border-white/[.08] mr-auto"
-            )}>
-              <div className="font-semibold text-[10px] mb-0.5 text-violet-400">{message.replyTo.senderName}</div>
+              isCurrentUser ? "ml-auto" : "mr-auto"
+            )}
+              style={{ background: "var(--t-reply-bg)", border: "1px solid var(--t-reply-border)" }}>
+              <div className="font-semibold text-[10px] mb-0.5" style={{ color: "var(--t-icon-color)" }}>
+                {message.replyTo.senderName}
+              </div>
               {message.replyTo.text ? (
                 <div className="truncate text-foreground/70">{message.replyTo.text}</div>
               ) : message.replyTo.mediaType ? (
@@ -259,8 +261,9 @@ export function MessageBubble({
                   >
                     <div className="flex gap-0.5 px-2.5 py-1.5 rounded-full"
                       style={{
-                        background: "rgba(18,14,40,0.95)", border: "1px solid rgba(124,58,237,.3)",
-                        boxShadow: "0 8px 32px rgba(0,0,0,.5), 0 0 16px rgba(124,58,237,.15)",
+                        background: "var(--t-picker-bg)",
+                        border: "1px solid var(--t-picker-border)",
+                        boxShadow: "0 8px 32px rgba(0,0,0,.2)",
                         backdropFilter: "blur(20px)"
                       }}>
                       {EMOJIS.map((emoji) => {
@@ -269,7 +272,7 @@ export function MessageBubble({
                           <button key={emoji} onClick={() => handleReact(emoji)}
                             className={cn(
                               "w-9 h-9 text-xl flex items-center justify-center rounded-full transition-all duration-150 hover:scale-125 active:scale-110",
-                              alreadyReacted ? "bg-violet-500/20" : "hover:bg-white/[.08]"
+                              alreadyReacted ? "bg-primary/15" : "hover:bg-muted"
                             )}>
                             {emoji}
                           </button>
@@ -283,13 +286,12 @@ export function MessageBubble({
               {/* The bubble itself */}
               <div
                 className={cn(
-                  "px-4 py-2.5 rounded-2xl relative cursor-pointer transition-all duration-200",
+                  "px-4 py-2.5 rounded-2xl relative cursor-pointer",
                   isCurrentUser
                     ? "bubble-sent text-white rounded-br-sm"
                     : "bubble-received text-foreground rounded-bl-sm",
                   isCurrentMatch && "ring-2 ring-yellow-400/70 ring-offset-1 ring-offset-transparent"
                 )}
-                onClick={() => setShowTime(!showTime)}
               >
                 {/* Media */}
                 {message.media && (
@@ -338,11 +340,13 @@ export function MessageBubble({
                           onClick={() => onReact?.(message.id, emoji)}
                           className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all select-none"
                           style={reacted ? {
-                            background: "rgba(124,58,237,.2)", border: "1px solid rgba(124,58,237,.4)",
-                            color: "#c084fc", fontWeight: 600,
-                            boxShadow: "0 0 8px rgba(124,58,237,.25)"
+                            background: "var(--t-reaction-active-bg)",
+                            border: "1px solid var(--t-reaction-active-border)",
+                            color: "var(--t-reaction-active-color)",
+                            fontWeight: 600
                           } : {
-                            background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.09)",
+                            background: "var(--t-reaction-inactive-bg)",
+                            border: "1px solid var(--t-reaction-inactive-border)",
                             color: "hsl(var(--foreground))"
                           }}>
                           <span>{emoji}</span><span>{uids.length}</span>
