@@ -19,7 +19,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ currentUser, selectedUser, onSelectUser, unreadCounts, onOpenNav }: SidebarProps) {
-  const { users, loading } = useUsers(currentUser.uid);
+  const { users, loading, error } = useUsers(currentUser.uid);
   const [searchQuery, setSearchQuery] = useState("");
 
   const sortedUsers = useMemo(() => {
@@ -97,8 +97,22 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser, unreadCounts,
                 <Search className="h-5 w-5 text-muted-foreground" />
               </div>
               <p className="text-sm text-muted-foreground">
-                {searchQuery ? "No contacts match your search." : "No other users found yet."}
+                {error
+                  ? "Contacts could not be loaded. Check the server connection and try again."
+                  : searchQuery
+                  ? "No contacts match your search."
+                  : "No other users found yet."}
               </p>
+              {error && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl"
+                  onClick={() => window.location.reload()}
+                >
+                  Try again
+                </Button>
+              )}
             </div>
           ) : (
             filteredUsers.map((u, idx) => {

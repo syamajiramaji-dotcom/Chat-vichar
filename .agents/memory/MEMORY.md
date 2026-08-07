@@ -1,1 +1,2 @@
 - [Replit DB list() response shape](replit-db-list-shape.md) — v3.x returns {ok, value} not array; always unwrap .value or roster breaks silently
+- [Socket roster hydration](socket-roster-hydration.md) — subscribe before requesting the snapshot, send it directly after auth, and explicitly proxy the Socket.IO path

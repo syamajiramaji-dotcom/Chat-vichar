@@ -58,17 +58,32 @@ export function setupSocket(httpServer: HttpServer) {
         socket.emit("unread_counts", { counts });
 
         const users = await db.getAllUsers();
-        io.emit("users_update", { users });
+        // Send the snapshot directly to the newly authenticated socket as
+        // well as broadcasting it. This avoids a race where a new client
+        // misses the broadcast while React is mounting its listeners.
+        socket.emit("users_update", { users });
+        socket.broadcast.emit("users_update", { users });
 
         logger.info({ uid }, "User authenticated");
       }
     );
 
     // ── get_users ────────────────────────────────────────────────────────────
-    socket.on("get_users", async (_: unknown, callback: (r: { users: Record<string, db.StoredUser> }) => void) => {
-      const users = await db.getAllUsers();
-      if (typeof callback === "function") callback({ users });
-    });
+    socket.on(
+      "get_users",
+      async (
+        _payload: unknown,
+        callback: (r: { users: Record<string, db.StoredUser> }) => void
+      ) => {
+        try {
+          const users = await db.getAllUsers();
+          if (typeof callback === "function") callback({ users });
+        } catch (error) {
+          logger.error({ error }, "Failed to load users");
+          if (typeof callback === "function") callback({ users: {} });
+        }
+      }
+    );
 
     // ── get_messages ─────────────────────────────────────────────────────────
     socket.on(
