@@ -3,10 +3,9 @@ import { io, type Socket } from "socket.io-client";
 // When deploying the frontend to a static host (e.g. Cloudflare Pages),
 // set VITE_API_URL to the full URL of your API server, e.g.:
 //   VITE_API_URL=https://api.your-domain.com
-// The Replit deployment below is the default public API for the current
-// Cloudflare Pages build. VITE_API_URL can override it for another backend.
-const DEFAULT_API_URL = "https://chat-vichaar--syamajiramaji.replit.app";
-const API_URL = (import.meta.env.VITE_API_URL || DEFAULT_API_URL)
+// Leave it unset when the frontend and API share the same origin. Never use a
+// temporary *.replit.dev address as a production fallback.
+const API_URL = (import.meta.env.VITE_API_URL || "")
   .trim()
   .replace(/\/+$/, "")
   .replace(/\/api$/, "");
