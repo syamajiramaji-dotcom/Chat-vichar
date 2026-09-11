@@ -67,12 +67,12 @@ export function NavSidebar({
   };
 
   const SidebarContent = (
-    <div className="flex flex-col h-full"
+    <div className="flex flex-col h-full min-h-0"
       style={{ background: "hsl(var(--sidebar))", borderRight: "1px solid var(--t-sidebar-panel-border)" }}>
 
       {/* ── Brand header ── */}
       <div className="shrink-0 gradient-sidebar-header">
-        <div className="flex items-center justify-between px-4 py-4">
+        <div className="flex items-center justify-between px-4 py-4 sm:py-5">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 btn-glow"
               style={{ background: "var(--t-gradient-primary)" }}>
@@ -85,14 +85,15 @@ export function NavSidebar({
           </div>
           {/* Mobile close */}
           <Button variant="ghost" size="icon"
-            className="md:hidden h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground"
+            aria-label="Close navigation"
+            className="md:hidden h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground active:scale-95"
             onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         {/* User card */}
-        <div className="mx-3 mb-4 flex items-center gap-3 px-3 py-2.5 rounded-2xl"
+        <div className="mx-3 mb-4 flex items-center gap-3 px-3.5 py-3 rounded-[20px]"
           style={{ background: "var(--t-user-chip-bg)", border: "1px solid var(--t-user-chip-border)" }}>
           <div className="relative shrink-0">
             <Avatar className="h-10 w-10">
@@ -116,7 +117,7 @@ export function NavSidebar({
 
       {/* ── Scrollable nav ── */}
       <ScrollArea className="flex-1">
-        <div className="px-2 py-3 space-y-0.5">
+        <div className="px-3 py-3 space-y-1">
 
           {/* Main nav items */}
           {mainNav.map(({ id, label, icon: Icon }) => {
@@ -125,7 +126,7 @@ export function NavSidebar({
             return (
               <button key={id} onClick={() => handleSelect(id)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 relative group",
+                  "w-full flex items-center gap-3 px-3.5 py-3 rounded-[14px] text-sm font-medium transition-all duration-150 relative group active:scale-[.99]",
                   isActive ? "text-white" : "text-muted-foreground hover:text-foreground"
                 )}
                 style={isActive ? {
@@ -163,7 +164,7 @@ export function NavSidebar({
           {/* Pages section */}
           <button
             onClick={() => setPagesOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl group"
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-[14px] group"
           >
             <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60 group-hover:text-muted-foreground transition-colors">
               Pages
@@ -187,7 +188,7 @@ export function NavSidebar({
                     return (
                       <button key={id} onClick={() => handleSelect(id)}
                         className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all duration-150 relative group",
+                          "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-[14px] text-sm transition-all duration-150 relative group active:scale-[.99]",
                           isActive ? "text-white font-medium" : "text-muted-foreground hover:text-foreground"
                         )}
                         style={isActive ? {
@@ -214,11 +215,11 @@ export function NavSidebar({
       </ScrollArea>
 
       {/* ── Bottom actions ── */}
-      <div className="shrink-0 px-2 pb-4 pt-2 space-y-1"
+      <div className="shrink-0 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 space-y-1"
         style={{ borderTop: "1px solid var(--t-divider)" }}>
         {/* Theme toggle */}
         <button onClick={toggleTheme}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground transition-all duration-150 relative group">
+           className="w-full flex items-center gap-3 px-3.5 py-3 rounded-[14px] text-sm font-medium text-muted-foreground hover:text-foreground transition-all duration-150 relative group active:scale-[.99]">
           <span className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
             style={{ background: "var(--t-contact-hover-bg)" }} />
           {theme === "dark" ? (
@@ -231,7 +232,7 @@ export function NavSidebar({
 
         {/* Logout */}
         <button onClick={logout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 relative group text-destructive/80 hover:text-destructive">
+           className="w-full flex items-center gap-3 px-3.5 py-3 rounded-[14px] text-sm font-medium transition-all duration-150 relative group text-destructive/80 hover:text-destructive active:scale-[.99]">
           <span className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
             style={{ background: "rgba(239,68,68,.06)" }} />
           <LogOut className="w-[18px] h-[18px] shrink-0 relative z-10" />
@@ -264,7 +265,7 @@ export function NavSidebar({
               key="drawer"
               initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }}
               transition={{ type: "spring", damping: 30, stiffness: 320 }}
-              className="fixed left-0 top-0 h-full w-[280px] z-50 md:hidden shadow-2xl"
+               className="fixed left-0 top-0 h-[100dvh] w-[min(86vw,330px)] z-50 md:hidden shadow-2xl"
             >
               {SidebarContent}
             </motion.div>

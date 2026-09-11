@@ -5,6 +5,7 @@ import {
   FileText, BookOpen, HelpCircle, Mail, MessageSquare,
   Bell, Lock, Palette, Globe, ChevronRight,
 } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface PagePanelProps {
   section: NavSection;
@@ -19,21 +20,22 @@ function SectionBadge({ label, color }: { label: string; color: string }) {
   );
 }
 
-function SettingsRow({ icon: Icon, label, desc, accent = false }: {
-  icon: React.ElementType; label: string; desc?: string; accent?: boolean;
+function SettingsRow({ icon: Icon, label, desc, accent = false, onClick }: {
+  icon: React.ElementType; label: string; desc?: string; accent?: boolean; onClick?: () => void;
 }) {
   return (
-    <button className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left group transition-all"
-      style={{ border: "1px solid var(--t-divider)" }}>
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+    <button type="button" onClick={onClick}
+      className="settings-row w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-2xl text-left group transition-all active:scale-[.99]"
+      style={{ background: "var(--t-settings-card-bg)", border: "1px solid var(--t-settings-card-border)" }}>
+      <div className="w-10 h-10 rounded-[14px] flex items-center justify-center shrink-0"
         style={{ background: accent ? "var(--t-gradient-primary)" : "var(--t-empty-icon-bg)" }}>
-        <Icon className="w-4.5 h-4.5" style={{ color: accent ? "white" : "var(--t-icon-color)" }} />
+        <Icon className="w-[18px] h-[18px]" style={{ color: accent ? "white" : "var(--t-icon-color)" }} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        {desc && <p className="text-xs text-muted-foreground mt-0.5 truncate">{desc}</p>}
+        <p className="text-[14px] font-semibold text-foreground">{label}</p>
+        {desc && <p className="text-[12px] text-muted-foreground mt-1 truncate">{desc}</p>}
       </div>
-      <ChevronRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+      <ChevronRight className="w-[18px] h-[18px] text-muted-foreground/45 shrink-0 transition-transform group-hover:translate-x-0.5" />
     </button>
   );
 }
@@ -81,38 +83,71 @@ function InfoPage({ title, sections }: { title: string; sections: { heading: str
 }
 
 export function PagePanel({ section }: PagePanelProps) {
+  const { toggleTheme } = useTheme();
+
   switch (section) {
     case "home":
       return (
-        <div className="flex flex-col items-center justify-center h-full text-center px-8 py-16">
-          <div className="relative mb-6">
-            <div className="w-24 h-24 rounded-3xl flex items-center justify-center btn-glow mx-auto"
-              style={{ background: "var(--t-gradient-primary)" }}>
-              <MessageSquare className="w-12 h-12 text-white" />
-            </div>
-            <div className="absolute inset-0 rounded-3xl blur-2xl opacity-30"
-              style={{ background: "var(--t-gradient-primary)" }} />
-          </div>
-          <h1 className="text-3xl font-bold gradient-text mb-3">Chat-vichar</h1>
-          <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mb-8">
-            An intimate, private messaging space. Your conversations are yours alone — secure, personal, and always at hand.
-          </p>
-          <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
-            {[
-              { icon: MessageSquare, label: "Private chats", desc: "End-to-end conversations" },
-              { icon: Users, label: "Contacts", desc: "Find people to chat with" },
-              { icon: Bookmark, label: "Saved", desc: "Your important messages" },
-              { icon: Bell, label: "Notifications", desc: "Web push support" },
-            ].map(({ icon: Icon, label, desc }) => (
-              <div key={label} className="flex flex-col items-start gap-1.5 p-3.5 rounded-2xl"
-                style={{ background: "var(--t-user-chip-bg)", border: "1px solid var(--t-user-chip-border)" }}>
-                <Icon className="w-5 h-5" style={{ color: "var(--t-icon-color)" }} />
-                <p className="text-sm font-semibold text-foreground">{label}</p>
-                <p className="text-[11px] text-muted-foreground leading-snug">{desc}</p>
+        <ScrollArea className="h-full">
+          <div className="home-page relative max-w-3xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
+            <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full pointer-events-none"
+              style={{ background: "var(--t-home-orb-1)" }} />
+            <div className="absolute top-72 -left-32 w-72 h-72 rounded-full pointer-events-none"
+              style={{ background: "var(--t-home-orb-2)" }} />
+
+            <div className="relative text-center">
+              <div className="relative inline-flex mb-5">
+                <div className="w-[76px] h-[76px] sm:w-[88px] sm:h-[88px] rounded-[27px] flex items-center justify-center btn-glow mx-auto"
+                  style={{ background: "var(--t-gradient-primary)" }}>
+                  <MessageSquare className="w-9 h-9 sm:w-11 sm:h-11 text-white" />
+                </div>
+                <div className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full border-4"
+                  style={{ background: "#22c55e", borderColor: "hsl(var(--background))" }} />
               </div>
-            ))}
+              <p className="text-[11px] font-bold uppercase tracking-[.22em] mb-3"
+                style={{ color: "var(--t-icon-color)" }}>
+                Simple. Private. Powerful.
+              </p>
+              <h1 className="text-[30px] sm:text-4xl font-bold tracking-tight gradient-text mb-3">Chat-vichar</h1>
+              <p className="text-base sm:text-lg font-medium text-foreground/85 mb-3">
+                Private, secure and meaningful conversations.
+              </p>
+              <p className="text-sm leading-6 text-muted-foreground max-w-xl mx-auto">
+                Stay connected with friends and family through private chats, real-time conversations and a simple, secure messaging experience.
+              </p>
+            </div>
+
+            <div className="relative grid grid-cols-1 sm:grid-cols-2 gap-3 mt-9">
+              {[
+                { icon: MessageSquare, label: "Private Chats", desc: "Secure one-to-one conversations with complete privacy." },
+                { icon: Users, label: "Contacts", desc: "Find and connect with people instantly." },
+                { icon: Bookmark, label: "Saved Messages", desc: "Keep important messages, links and memories safe." },
+                { icon: Bell, label: "Notifications", desc: "Receive instant alerts and never miss an important message." },
+              ].map(({ icon: Icon, label, desc }) => (
+                <div key={label} className="home-feature-card group rounded-[22px] p-4 sm:p-5"
+                  style={{ background: "var(--t-home-card-bg)", border: "1px solid var(--t-home-card-border)" }}>
+                  <div className="w-10 h-10 rounded-[14px] flex items-center justify-center mb-4 transition-transform group-hover:scale-105"
+                    style={{ background: "var(--t-empty-icon-bg)", border: "1px solid var(--t-empty-icon-border)" }}>
+                    <Icon className="w-[18px] h-[18px]" style={{ color: "var(--t-icon-color)" }} />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground mb-1.5">{label}</p>
+                  <p className="text-xs leading-5 text-muted-foreground">{desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="relative mt-5 rounded-[22px] p-4 sm:p-5 flex items-center gap-3"
+              style={{ background: "var(--t-home-note-bg)", border: "1px solid var(--t-home-card-border)" }}>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: "var(--t-gradient-primary)" }}>
+                <Shield className="w-4 h-4 text-white" />
+              </div>
+              <p className="text-xs leading-5 text-muted-foreground">
+                Your conversations stay personal, secure and focused on the people who matter.
+              </p>
+            </div>
           </div>
-        </div>
+        </ScrollArea>
       );
 
     case "people":
@@ -136,24 +171,29 @@ export function PagePanel({ section }: PagePanelProps) {
     case "settings":
       return (
         <ScrollArea className="h-full">
-          <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
-            <div>
-              <h1 className="text-xl font-bold text-foreground mb-1">Settings</h1>
+          <div className="settings-page max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-8">
+            <div className="mb-7">
+              <p className="text-[11px] font-bold uppercase tracking-[.2em] mb-2"
+                style={{ color: "var(--t-icon-color)" }}>Preferences</p>
+              <h1 className="text-[26px] font-bold tracking-tight text-foreground mb-1.5">Settings</h1>
               <p className="text-sm text-muted-foreground">Manage your account and preferences</p>
             </div>
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-1 mb-2">Account</p>
+
+            <div className="space-y-2.5 mb-7">
+              <p className="settings-section-label">Account</p>
               <SettingsRow icon={Users} label="Profile" desc="Update your name, photo, and bio" />
               <SettingsRow icon={Bell} label="Notifications" desc="Push, sound, and badge settings" />
               <SettingsRow icon={Lock} label="Privacy" desc="Control who can see your status" />
             </div>
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-1 mb-2">Appearance</p>
-              <SettingsRow icon={Palette} label="Theme" desc="Toggle dark and light mode" accent />
+
+            <div className="space-y-2.5 mb-7">
+              <p className="settings-section-label">Appearance</p>
+              <SettingsRow icon={Palette} label="Theme" desc="Toggle dark and light mode" accent onClick={toggleTheme} />
               <SettingsRow icon={Globe} label="Language" desc="English (default)" />
             </div>
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-1 mb-2">Support</p>
+
+            <div className="space-y-2.5">
+              <p className="settings-section-label">Support</p>
               <SettingsRow icon={HelpCircle} label="Help & Support" desc="FAQs and troubleshooting" />
               <SettingsRow icon={Info} label="About Chat-vichar" desc="Version 1.0" />
             </div>

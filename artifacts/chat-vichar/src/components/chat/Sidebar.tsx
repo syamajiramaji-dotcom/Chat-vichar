@@ -48,30 +48,37 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser, unreadCounts,
 
       {/* ── Header ── */}
       <div className="shrink-0 gradient-sidebar-header">
-        <div className="flex items-center gap-3 px-4 h-14">
+        <div className="flex items-center gap-3 px-4 h-16">
           {/* Mobile: hamburger to open NavSidebar */}
           <Button variant="ghost" size="icon"
-            className="md:hidden h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground shrink-0"
+            aria-label="Open navigation"
+            className="md:hidden h-10 w-10 rounded-[14px] text-muted-foreground hover:text-foreground active:scale-95 shrink-0"
             onClick={onOpenNav}>
             <Menu className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <MessageSquare className="w-4 h-4 shrink-0" style={{ color: "var(--t-icon-color)" }} />
-            <h2 className="font-bold text-sm gradient-text tracking-wide">Chats</h2>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: "var(--t-gradient-primary)" }}>
+              <MessageSquare className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-bold text-[15px] gradient-text tracking-wide leading-tight">Chats</h2>
+              <p className="text-[11px] text-muted-foreground/65 mt-0.5">Your conversations</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ── Search ── */}
-      <div className="px-3 py-2.5 shrink-0"
+      <div className="px-3.5 py-3 shrink-0"
         style={{ borderBottom: "1px solid var(--t-divider)" }}>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Search contacts…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 text-sm rounded-xl placeholder:text-muted-foreground/50"
+            className="pl-10 h-11 text-sm rounded-[15px] placeholder:text-muted-foreground/50"
             style={{ background: "var(--t-search-bg)", border: "1px solid var(--t-search-border)" }}
           />
         </div>
@@ -79,7 +86,7 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser, unreadCounts,
 
       {/* ── Contact list ── */}
       <ScrollArea className="flex-1">
-        <div className="p-2 space-y-0.5">
+        <div className="p-3 space-y-1">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 p-3 rounded-2xl">
@@ -126,7 +133,7 @@ export function Sidebar({ currentUser, selectedUser, onSelectUser, unreadCounts,
                   data-testid={`user-item-${u.uid}`}
                   onClick={() => onSelectUser(u)}
                   className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-2xl transition-all duration-150 text-left relative",
+                    "w-full flex items-center gap-3 px-3 py-3 rounded-[18px] transition-all duration-150 text-left relative active:scale-[.99]",
                     !isSelected && "hover:bg-[var(--t-contact-hover-bg)]"
                   )}
                   style={isSelected ? {

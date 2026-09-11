@@ -6,7 +6,7 @@ import { ChatWindow } from "./ChatWindow";
 import { ChatUser } from "@/types/chat";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { markAsRead } from "@/lib/unread";
-import { MessageSquare } from "lucide-react";
+import { Menu, MessageSquare } from "lucide-react";
 
 const PagePanel = lazy(() =>
   import("@/components/nav/PagePanel").then((m) => ({ default: m.PagePanel }))
@@ -89,15 +89,18 @@ export function ChatLayout() {
             }}>
             {/* Mobile hamburger header for page panels */}
             <div className="md:hidden shrink-0 gradient-sidebar-header">
-              <div className="flex items-center gap-3 px-4 h-14">
+              <div className="flex items-center gap-3 px-4 h-16">
                 <button
                   onClick={() => setNavOpen(true)}
-                  className="h-8 w-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Open navigation"
+                  className="h-10 w-10 rounded-[14px] flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-all"
                   style={{ background: "var(--t-input-bg)", border: "1px solid var(--t-input-border)" }}>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
+                  <Menu className="w-4 h-4" />
                 </button>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-foreground capitalize">{activeSection}</p>
+                  <p className="text-[11px] text-muted-foreground">Chat-vichar</p>
+                </div>
               </div>
             </div>
             <div className="flex-1 overflow-hidden">

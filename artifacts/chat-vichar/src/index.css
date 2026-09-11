@@ -192,6 +192,13 @@
   --t-icon-color:              #a78bfa;
   --t-typing-color:            #a78bfa;
   --t-logo-color:              linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  --t-home-card-bg:            rgba(255,255,255,.045);
+  --t-home-card-border:        rgba(167,139,250,.16);
+  --t-home-note-bg:             rgba(124,58,237,.09);
+  --t-home-orb-1:               radial-gradient(circle, rgba(124,58,237,.13) 0%, transparent 68%);
+  --t-home-orb-2:               radial-gradient(circle, rgba(79,70,229,.10) 0%, transparent 68%);
+  --t-settings-card-bg:         rgba(255,255,255,.035);
+  --t-settings-card-border:     rgba(255,255,255,.075);
 }
 
 /* ── LIGHT THEME ────────────────────────────────────────────────────────────── */
@@ -325,6 +332,13 @@
   --t-icon-color:              #2563eb;
   --t-typing-color:            #2563eb;
   --t-logo-color:              linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  --t-home-card-bg:            rgba(255,255,255,.82);
+  --t-home-card-border:        rgba(37,99,235,.14);
+  --t-home-note-bg:             rgba(37,99,235,.06);
+  --t-home-orb-1:               radial-gradient(circle, rgba(37,99,235,.10) 0%, transparent 68%);
+  --t-home-orb-2:               radial-gradient(circle, rgba(59,130,246,.08) 0%, transparent 68%);
+  --t-settings-card-bg:         rgba(255,255,255,.88);
+  --t-settings-card-border:     rgba(0,0,0,.08);
 }
 
 /* .dark mirrors :root for explicit dark class usage */
@@ -439,6 +453,56 @@
 
 /* Primary glow button */
 .btn-glow { box-shadow: 0 0 20px var(--t-primary-glow), 0 4px 12px var(--t-primary-glow); }
+
+/* Premium mobile-first page surfaces */
+.home-feature-card,
+.settings-row {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .06);
+  backdrop-filter: blur(12px);
+}
+
+.home-feature-card {
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.home-feature-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--t-contact-selected-border) !important;
+  box-shadow: 0 12px 28px var(--t-contact-selected-shadow);
+}
+
+.settings-row {
+  min-height: 74px;
+  transition: transform .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.settings-row:hover {
+  background: var(--t-contact-hover-bg) !important;
+  border-color: var(--t-contact-selected-border) !important;
+  box-shadow: 0 8px 20px var(--t-contact-selected-shadow);
+}
+
+.settings-section-label {
+  padding: 0 .25rem;
+  margin-bottom: .7rem;
+  color: hsl(var(--muted-foreground));
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 767px) {
+  .home-page,
+  .settings-page {
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  }
+
+  .home-feature-card:hover,
+  .settings-row:hover {
+    transform: none;
+  }
+}
 
 /* Animated gradient orbs */
 @keyframes orb-drift {
