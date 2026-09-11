@@ -3,9 +3,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Home, Users, UsersRound, Bookmark, Settings, Info, Shield,
   FileText, BookOpen, HelpCircle, Mail, MessageSquare,
-  Bell, Lock, Palette, Globe, ChevronRight,
+  Bell, Lock, Palette, Globe, ChevronRight, Share2, Copy, Check,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useEffect, useState } from "react";
 
 interface PagePanelProps {
   section: NavSection;
@@ -84,70 +85,194 @@ function InfoPage({ title, sections }: { title: string; sections: { heading: str
 
 export function PagePanel({ section }: PagePanelProps) {
   const { toggleTheme } = useTheme();
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [inviteCopyError, setInviteCopyError] = useState(false);
+  const inviteMessage = "मैं Chat-Vichar इस्तेमाल कर रहा हूँ। आप भी जुड़ें और अपने दोस्तों के साथ private और secure chat करें।";
+  const inviteUrl = typeof window !== "undefined" ? window.location.href : "";
+  const fullInvite = `${inviteMessage}\n${inviteUrl}`;
+
+  useEffect(() => {
+    if (!inviteOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setInviteOpen(false);
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [inviteOpen]);
+
+  const handleInvite = async () => {
+    setInviteCopied(false);
+    setInviteCopyError(false);
+
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "Chat-Vichar",
+          text: inviteMessage,
+          url: inviteUrl,
+        });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+
+    setInviteOpen(true);
+  };
+
+  const handleCopyInvite = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(fullInvite);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = fullInvite;
+        textArea.setAttribute("readonly", "");
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        document.body.appendChild(textArea);
+        textArea.select();
+        const copied = document.execCommand("copy");
+        textArea.remove();
+        if (!copied) throw new Error("Clipboard copy was not available");
+      }
+      setInviteCopied(true);
+      setInviteCopyError(false);
+    } catch {
+      setInviteCopied(false);
+      setInviteCopyError(true);
+    }
+  };
 
   switch (section) {
     case "home":
       return (
-        <ScrollArea className="h-full">
-          <div className="home-page relative max-w-3xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
-            <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full pointer-events-none"
-              style={{ background: "var(--t-home-orb-1)" }} />
-            <div className="absolute top-72 -left-32 w-72 h-72 rounded-full pointer-events-none"
-              style={{ background: "var(--t-home-orb-2)" }} />
+        <>
+          <ScrollArea className="h-full">
+            <div className="home-page relative max-w-3xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
+              <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full pointer-events-none"
+                style={{ background: "var(--t-home-orb-1)" }} />
+              <div className="absolute top-72 -left-32 w-72 h-72 rounded-full pointer-events-none"
+                style={{ background: "var(--t-home-orb-2)" }} />
 
-            <div className="relative text-center">
-              <div className="relative inline-flex mb-5">
-                <div className="w-[76px] h-[76px] sm:w-[88px] sm:h-[88px] rounded-[27px] flex items-center justify-center btn-glow mx-auto"
-                  style={{ background: "var(--t-gradient-primary)" }}>
-                  <MessageSquare className="w-9 h-9 sm:w-11 sm:h-11 text-white" />
-                </div>
-                <div className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full border-4"
-                  style={{ background: "#22c55e", borderColor: "hsl(var(--background))" }} />
-              </div>
-              <p className="text-[11px] font-bold uppercase tracking-[.22em] mb-3"
-                style={{ color: "var(--t-icon-color)" }}>
-                Simple. Private. Powerful.
-              </p>
-              <h1 className="text-[30px] sm:text-4xl font-bold tracking-tight gradient-text mb-3">Chat-vichar</h1>
-              <p className="text-base sm:text-lg font-medium text-foreground/85 mb-3">
-                Private, secure and meaningful conversations.
-              </p>
-              <p className="text-sm leading-6 text-muted-foreground max-w-xl mx-auto">
-                Stay connected with friends and family through private chats, real-time conversations and a simple, secure messaging experience.
-              </p>
-            </div>
-
-            <div className="relative grid grid-cols-1 sm:grid-cols-2 gap-3 mt-9">
-              {[
-                { icon: MessageSquare, label: "Private Chats", desc: "Secure one-to-one conversations with complete privacy." },
-                { icon: Users, label: "Contacts", desc: "Find and connect with people instantly." },
-                { icon: Bookmark, label: "Saved Messages", desc: "Keep important messages, links and memories safe." },
-                { icon: Bell, label: "Notifications", desc: "Receive instant alerts and never miss an important message." },
-              ].map(({ icon: Icon, label, desc }) => (
-                <div key={label} className="home-feature-card group rounded-[22px] p-4 sm:p-5"
-                  style={{ background: "var(--t-home-card-bg)", border: "1px solid var(--t-home-card-border)" }}>
-                  <div className="w-10 h-10 rounded-[14px] flex items-center justify-center mb-4 transition-transform group-hover:scale-105"
-                    style={{ background: "var(--t-empty-icon-bg)", border: "1px solid var(--t-empty-icon-border)" }}>
-                    <Icon className="w-[18px] h-[18px]" style={{ color: "var(--t-icon-color)" }} />
+              <div className="relative text-center">
+                <div className="relative inline-flex mb-5">
+                  <div className="w-[76px] h-[76px] sm:w-[88px] sm:h-[88px] rounded-[27px] flex items-center justify-center btn-glow mx-auto"
+                    style={{ background: "var(--t-gradient-primary)" }}>
+                    <MessageSquare className="w-9 h-9 sm:w-11 sm:h-11 text-white" />
                   </div>
-                  <p className="text-sm font-semibold text-foreground mb-1.5">{label}</p>
-                  <p className="text-xs leading-5 text-muted-foreground">{desc}</p>
+                  <div className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full border-4"
+                    style={{ background: "#22c55e", borderColor: "hsl(var(--background))" }} />
                 </div>
-              ))}
-            </div>
-
-            <div className="relative mt-5 rounded-[22px] p-4 sm:p-5 flex items-center gap-3"
-              style={{ background: "var(--t-home-note-bg)", border: "1px solid var(--t-home-card-border)" }}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "var(--t-gradient-primary)" }}>
-                <Shield className="w-4 h-4 text-white" />
+                <p className="text-[11px] font-bold uppercase tracking-[.22em] mb-3"
+                  style={{ color: "var(--t-icon-color)" }}>
+                  Simple. Private. Powerful.
+                </p>
+                <h1 className="text-[30px] sm:text-4xl font-bold tracking-tight gradient-text mb-3">Chat-vichar</h1>
+                <p className="text-base sm:text-lg font-medium text-foreground/85 mb-3">
+                  Private, secure and meaningful conversations.
+                </p>
+                <p className="text-sm leading-6 text-muted-foreground max-w-xl mx-auto">
+                  Stay connected with friends and family through private chats, real-time conversations and a simple, secure messaging experience.
+                </p>
               </div>
-              <p className="text-xs leading-5 text-muted-foreground">
-                Your conversations stay personal, secure and focused on the people who matter.
-              </p>
+
+              <div className="relative grid grid-cols-1 sm:grid-cols-2 gap-3 mt-9">
+                {[
+                  { icon: MessageSquare, label: "Private Chats", desc: "Secure one-to-one conversations with complete privacy." },
+                  { icon: Users, label: "Contacts", desc: "Find and connect with people instantly." },
+                  { icon: Bookmark, label: "Saved Messages", desc: "Keep important messages, links and memories safe." },
+                  { icon: Bell, label: "Notifications", desc: "Receive instant alerts and never miss an important message." },
+                ].map(({ icon: Icon, label, desc }) => (
+                  <div key={label} className="home-feature-card group rounded-[22px] p-4 sm:p-5"
+                    style={{ background: "var(--t-home-card-bg)", border: "1px solid var(--t-home-card-border)" }}>
+                    <div className="w-10 h-10 rounded-[14px] flex items-center justify-center mb-4 transition-transform group-hover:scale-105"
+                      style={{ background: "var(--t-empty-icon-bg)", border: "1px solid var(--t-empty-icon-border)" }}>
+                      <Icon className="w-[18px] h-[18px]" style={{ color: "var(--t-icon-color)" }} />
+                    </div>
+                    <p className="text-sm font-semibold text-foreground mb-1.5">{label}</p>
+                    <p className="text-xs leading-5 text-muted-foreground">{desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <button type="button" onClick={handleInvite}
+                className="home-invite-card relative w-full mt-5 rounded-[22px] p-4 sm:p-5 flex items-center gap-3 text-left group active:scale-[.99]"
+                style={{ border: "1px solid var(--t-home-invite-border)" }}>
+                <div className="w-11 h-11 rounded-[15px] flex items-center justify-center shrink-0"
+                  style={{ background: "var(--t-gradient-primary)", boxShadow: "0 8px 20px var(--t-primary-glow)" }}>
+                  <UsersRound className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-sm sm:text-base font-semibold text-foreground">अपने दोस्तों को Chat-Vichar पर आमंत्रित करें</h2>
+                  <p className="text-xs leading-5 text-muted-foreground mt-1">
+                    अपने दोस्तों और परिवार के साथ जुड़ें और सुरक्षित बातचीत शुरू करें।
+                  </p>
+                  <span className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold"
+                    style={{ color: "var(--t-icon-color)" }}>
+                    <span aria-hidden="true">👥</span>
+                    दोस्तों को आमंत्रित करें
+                    <Share2 className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </div>
+                <ChevronRight className="w-5 h-5 shrink-0 text-muted-foreground/55 transition-transform group-hover:translate-x-0.5" />
+              </button>
+
+              <div className="relative mt-5 rounded-[22px] p-4 sm:p-5 flex items-center gap-3"
+                style={{ background: "var(--t-home-note-bg)", border: "1px solid var(--t-home-card-border)" }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: "var(--t-gradient-primary)" }}>
+                  <Shield className="w-4 h-4 text-white" />
+                </div>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Your conversations stay personal, secure and focused on the people who matter.
+                </p>
+              </div>
             </div>
-          </div>
-        </ScrollArea>
+          </ScrollArea>
+
+          {inviteOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              role="dialog" aria-modal="true" aria-labelledby="invite-dialog-title">
+              <button type="button" aria-label="Close invite dialog"
+                className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+                onClick={() => setInviteOpen(false)} />
+              <div className="relative w-full max-w-md rounded-[24px] p-5 sm:p-6 shadow-2xl"
+                style={{ background: "var(--t-settings-card-bg)", border: "1px solid var(--t-settings-card-border)" }}>
+                <button type="button" aria-label="Close invite dialog"
+                  onClick={() => setInviteOpen(false)}
+                  className="absolute right-4 top-4 w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors">
+                  ×
+                </button>
+                <div className="pr-8">
+                  <h2 id="invite-dialog-title" className="text-lg font-semibold gradient-text">
+                    दोस्तों को Chat-Vichar पर आमंत्रित करें
+                  </h2>
+                  <p className="text-sm text-muted-foreground pt-2 leading-5">
+                    नीचे दिया गया invite message copy करके अपने दोस्तों के साथ share करें।
+                  </p>
+                </div>
+                <div className="rounded-2xl p-3.5 mt-5 space-y-3"
+                  style={{ background: "var(--t-input-bg)", border: "1px solid var(--t-input-border)" }}>
+                  <p className="text-sm leading-6 text-foreground/85">{inviteMessage}</p>
+                  <p className="text-xs leading-5 break-all text-muted-foreground">{inviteUrl}</p>
+                </div>
+                <button type="button" onClick={handleCopyInvite}
+                  className="w-full min-h-12 mt-5 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white btn-glow active:scale-[.98] transition-transform"
+                  style={{ background: "var(--t-gradient-primary)" }}>
+                  {inviteCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {inviteCopied ? "Copied" : "Copy Invite"}
+                </button>
+                {inviteCopyError && (
+                  <p className="text-xs text-center text-destructive mt-3">
+                    Copy unavailable. Please select the message and copy it manually.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       );
 
     case "people":
